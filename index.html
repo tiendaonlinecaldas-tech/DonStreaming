@@ -5,54 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Don Streaming IPTV</title>
   <link rel="stylesheet" href="styles.css">
-  <!-- Reproductor HLS para flujos de video .m3u8 / IPTV -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
 
-  <!-- PANTALLA DE LOGIN -->
+  <!-- PANTALLA DE LOGIN UNIFICADA -->
   <div id="loginScreen" class="login-container">
     <div class="login-card">
       <img src="logo.png" alt="Don Streaming" class="login-logo" onerror="this.src='lgo.png'">
       <h2>Don Streaming IPTV</h2>
-      <p>Plataforma de reproducción streaming</p>
+      <p class="login-subtitle">Ingresa las credenciales de tu servicio</p>
 
-      <div class="auth-tabs">
-        <button type="button" id="tabXtream" class="tab-btn active" onclick="cambiarMetodo('xtream')">🔑 Usuario / Clave</button>
-        <button type="button" id="tabM3u" class="tab-btn" onclick="cambiarMetodo('m3u')">🔗 URL M3U</button>
-      </div>
-
-      <!-- FORMULARIO XTREAM -->
-      <form id="formXtream" onsubmit="iniciarSesionXtream(event)">
+      <form id="formLogin" onsubmit="iniciarSesion(event)">
         <div class="input-group">
-          <label>URL del Servidor / DNS</label>
-          <input type="text" id="serverUrl" placeholder="http://dominio.com:80" required>
+          <label>URL del Servidor / Host</label>
+          <input type="text" id="serverUrl" placeholder="http://ejemplo.com:80" required>
         </div>
         <div class="input-group">
-          <label>Usuario IPTV</label>
-          <input type="text" id="username" placeholder="Usuario" required>
+          <label>Usuario</label>
+          <input type="text" id="username" placeholder="Tu usuario" required>
         </div>
         <div class="input-group">
           <label>Contraseña</label>
-          <input type="password" id="password" placeholder="Contraseña" required>
+          <input type="password" id="password" placeholder="Tu contraseña" required>
         </div>
         <button type="submit" class="btn-login">🚀 Iniciar Sesión</button>
-      </form>
-
-      <!-- FORMULARIO M3U -->
-      <form id="formM3u" class="hidden" onsubmit="iniciarSesionM3u(event)">
-        <div class="input-group">
-          <label>URL de la lista M3U / M3U8</label>
-          <input type="url" id="m3uUrl" placeholder="http://dominio.com/get.php?username=..." required>
-        </div>
-        <button type="submit" class="btn-login">🚀 Cargar Lista M3U</button>
       </form>
 
       <div id="errorMessage" class="error-box hidden"></div>
     </div>
   </div>
 
-  <!-- DASHBOARD PRINCIPAL (TIPO SMARTERS) -->
+  <!-- DASHBOARD PRINCIPAL -->
   <div id="appContainer" class="app-container hidden">
     <header class="top-bar">
       <div class="brand-box">
@@ -97,7 +81,7 @@
     </footer>
   </div>
 
-  <!-- VISTA DE CANALES Y REPRODUCTOR INTEGRADO -->
+  <!-- VISTA DEL REPRODUCTOR Y CANALES -->
   <div id="playerView" class="player-view hidden">
     <header class="player-header">
       <button onclick="volverAlMenu()" class="btn-back">⬅️ Volver al Menú</button>
@@ -105,7 +89,6 @@
     </header>
 
     <div class="player-content">
-      <!-- SIDEBAR DE CATEGORÍAS Y CANALES -->
       <aside class="channel-sidebar">
         <div class="search-box">
           <input type="text" id="searchInput" placeholder="🔍 Buscar canal o película..." oninput="filtrarCanales()">
@@ -115,7 +98,6 @@
         </div>
       </aside>
 
-      <!-- ÁREA DEL REPRODUCTOR DE VIDEO -->
       <main class="video-container">
         <div class="video-wrapper">
           <video id="mainVideoPlayer" controls autoplay playsinline></video>
