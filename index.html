@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -55,7 +55,7 @@
     .status-success { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
     .status-error { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; }
 
-    /* VISTA REPRODUCTOR */
+    /* REPRODUCTOR */
     .player-view { width: 100vw; height: 100vh; display: flex; flex-direction: column; background: #000; position: fixed; top: 0; left: 0; z-index: 999; }
     .player-header { padding: 10px 18px; background: #0f172a; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; }
     .btn-back { background: #ef4444; border: none; color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
@@ -91,7 +91,7 @@
       <div id="formM3u">
         <div class="input-group">
           <label>URL M3U de la Lista:</label>
-          <input type="text" id="directM3uUrl" placeholder="http://aioplus.es:80/playlist/...">
+          <input type="text" id="directM3uUrl" placeholder="http://aioplus.es:80/playlist/MAUROIPTV/MAURO121672/m3u">
         </div>
         <button class="btn-action" onclick="conectarM3uDirecto()">🚀 Entrar con URL M3U</button>
       </div>
@@ -99,15 +99,15 @@
       <div id="formXtream" class="hidden">
         <div class="input-group">
           <label>Servidor / Host:</label>
-          <input type="text" id="xtreamHost" placeholder="http://aioplus.es:80">
+          <input type="text" id="xtreamHost" value="http://aioplus.es:80">
         </div>
         <div class="input-group">
           <label>Usuario:</label>
-          <input type="text" id="xtreamUser" placeholder="MAUROIPTV">
+          <input type="text" id="xtreamUser" value="MAUROIPTV">
         </div>
         <div class="input-group">
           <label>Contraseña:</label>
-          <input type="password" id="xtreamPass" placeholder="MAURO121672">
+          <input type="password" id="xtreamPass" value="MAURO121672">
         </div>
         <button class="btn-action" onclick="conectarXtreamDirecto()">🚀 Entrar con Xtream API</button>
       </div>
@@ -122,7 +122,7 @@
         </div>
         <div class="device-row">
           <label>🔑 Key Activación:</label>
-          <span id="displayKey">---</span>
+          <span id="displayKey">572290</span>
         </div>
       </div>
       <button class="btn-action" onclick="comprobarActivacionMac()">🔄 Verificar / Cargar Lista Remota</button>
@@ -141,11 +141,11 @@
       <div id="adminPanel" class="hidden">
         <div class="input-group">
           <label>MAC del Cliente:</label>
-          <input type="text" id="targetMac">
+          <input type="text" id="targetMac" value="00:1A:79:E1:91:06">
         </div>
         <div class="input-group">
           <label>URL M3U para este cliente:</label>
-          <input type="text" id="targetM3u">
+          <input type="text" id="targetM3u" value="http://aioplus.es:80/playlist/MAUROIPTV/MAURO121672/m3u">
         </div>
         <button class="btn-action" style="background: #10b981;" onclick="vincularListaRemota()">⚡ Activar Lista Remota</button>
       </div>
@@ -208,48 +208,81 @@
       document.getElementById('btnSubXtream').classList.toggle('active', type === 'xtream');
     }
 
-    // PETICIÓN A TRAVÉS DE PROXIES PARA CORREGIR EL BLOQUEO HTTP EN HTTPS
-    async function descargarListaProxy(rawUrl) {
-      const targetUrl = rawUrl.trim();
-      const proxyEndpoints = [
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
-        `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`
+    // EXTRAER PARÁMETROS DE LA URL
+    function parseXtreamFromUrl(url) {
+      try {
+        const u = new URL(url);
+        const parts = u.pathname.split('/');
+        if (parts.length >= 4 && parts[1] === 'playlist') {
+          return {
+            host: `${u.protocol}//${u.host}`,
+            user: parts[2],
+            pass: parts[3]
+          };
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    // PROCESAMIENTO MULTI-PROXY
+    async function solicitarUrl(targetUrl) {
+      const endpoints = [
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
       ];
 
-      showStatus('⏳ Conectando al servidor y procesando canales...', 'success');
-
-      for (let proxyUrl of proxyEndpoints) {
+      for (let proxy of endpoints) {
         try {
-          const res = await fetch(proxyUrl);
+          const res = await fetch(proxy);
           if (res.ok) {
-            const text = await res.text();
-            if (text && text.includes('#EXTINF')) {
-              return text;
-            }
+            const data = await res.text();
+            if (data && data.length > 50) return data;
           }
-        } catch (e) {
-          console.warn('Proxy falló, intentando siguiente...', e);
-        }
+        } catch (e) {}
       }
-
-      throw new Error('El servidor de la lista no respondió o está fuera de línea.');
+      return null;
     }
 
     async function conectarM3uDirecto() {
       const url = document.getElementById('directM3uUrl').value.trim();
       if (!url) return showStatus('Ingresa una URL M3U válida', 'error');
 
-      try {
-        const content = await descargarListaProxy(url);
-        loadedChannels = parseM3U(content);
+      showStatus('⏳ Consultando lista en el servidor...', 'success');
 
-        if (loadedChannels.length === 0) throw new Error('La lista se descargó pero no contiene canales válidos.');
-
-        showStatus(`¡Éxito! Cargarán ${loadedChannels.length} canales.`, 'success');
-        setTimeout(() => abrirReproductor(), 800);
-      } catch (err) {
-        showStatus('Error: ' + err.message, 'error');
+      // Intentar primero parsear Xtream API si la URL tiene formato playlist
+      const xtreamData = parseXtreamFromUrl(url);
+      if (xtreamData) {
+        const jsonUrl = `${xtreamData.host}/player_api.php?username=${xtreamData.user}&password=${xtreamData.pass}&action=get_live_streams`;
+        const jsonText = await solicitarUrl(jsonUrl);
+        if (jsonText) {
+          try {
+            const streams = JSON.parse(jsonText);
+            if (Array.isArray(streams) && streams.length > 0) {
+              loadedChannels = streams.map(s => ({
+                name: s.name,
+                url: `${xtreamData.host}/live/${xtreamData.user}/${xtreamData.pass}/${s.stream_id}.m3u8`
+              }));
+              showStatus(`¡Éxito! ${loadedChannels.length} canales cargados vía API.`, 'success');
+              setTimeout(() => abrirReproductor(), 600);
+              return;
+            }
+          } catch(e) {}
+        }
       }
+
+      // Método alternativo: Descarga M3U tradicional
+      const m3uText = await solicitarUrl(url);
+      if (m3uText) {
+        loadedChannels = parseM3U(m3uText);
+        if (loadedChannels.length > 0) {
+          showStatus(`¡Éxito! ${loadedChannels.length} canales cargados.`, 'success');
+          setTimeout(() => abrirReproductor(), 600);
+          return;
+        }
+      }
+
+      showStatus('Error: El servidor no respondió. Verifica que la lista esté activa en tu panel.', 'error');
     }
 
     async function conectarXtreamDirecto() {
@@ -262,7 +295,7 @@
       if (!host.startsWith('http://') && !host.startsWith('https://')) host = 'http://' + host;
       if (host.endsWith('/')) host = host.slice(0, -1);
 
-      const m3uUrl = `${host}/get.php?username=${user}&password=${pass}&type=m3u_plus&output=ts`;
+      const m3uUrl = `${host}/playlist/${user}/${pass}/m3u`;
       document.getElementById('directM3uUrl').value = m3uUrl;
       conectarM3uDirecto();
     }
@@ -272,7 +305,7 @@
       const activeM3u = localStorage.getItem('playlist_' + mac);
 
       if (!activeM3u) {
-        return showStatus('No hay lista vinculada a esta MAC. Ve al Panel Admin y vincúlala.', 'error');
+        return showStatus('No hay lista vinculada. Ve a Panel Admin para guardarla.', 'error');
       }
 
       document.getElementById('directM3uUrl').value = activeM3u;
@@ -284,7 +317,7 @@
       if (pass === '1234') {
         document.getElementById('adminAuth').classList.add('hidden');
         document.getElementById('adminPanel').classList.remove('hidden');
-        showStatus('Acceso permitido', 'success');
+        showStatus('Acceso concedido', 'success');
       } else {
         showStatus('Clave incorrecta. Usa: 1234', 'error');
       }
@@ -297,7 +330,7 @@
       if (!targetMac || !targetM3u) return showStatus('Escribe la MAC y la URL M3U', 'error');
 
       localStorage.setItem('playlist_' + targetMac, targetM3u);
-      showStatus(`¡Lista guardada para MAC ${targetMac}!`, 'success');
+      showStatus(`¡Lista vinculada exitosamente a la MAC ${targetMac}!`, 'success');
     }
 
     function parseM3U(text) {
