@@ -9,14 +9,20 @@
 </head>
 <body>
 
-  <!-- PANTALLA DE LOGIN -->
+  <!-- LOGIN MULTI-INGRESO -->
   <div id="loginScreen" class="login-container">
     <div class="login-card">
-      <img src="logo.png" alt="Don Streaming" class="login-logo">
+      <img src="logo.png" alt="Don Streaming" class="login-logo" onerror="this.src='lgo.png'">
       <h2>Don Streaming IPTV</h2>
       <p>Plataforma de reproducción streaming</p>
 
-      <form id="loginForm" onsubmit="iniciarSesion(event)">
+      <div class="auth-tabs">
+        <button type="button" id="tabXtream" class="tab-btn active" onclick="cambiarMetodo('xtream')">🔑 Usuario / Clave</button>
+        <button type="button" id="tabM3u" class="tab-btn" onclick="cambiarMetodo('m3u')">🔗 URL M3U</button>
+      </div>
+
+      <!-- FORMULARIO 1: XTREAM CODES -->
+      <form id="formXtream" onsubmit="iniciarSesionXtream(event)">
         <div class="input-group">
           <label>URL del Servidor / DNS</label>
           <input type="text" id="serverUrl" placeholder="http://dominio.com:80" required>
@@ -31,66 +37,62 @@
         </div>
         <button type="submit" class="btn-login">🚀 Iniciar Sesión</button>
       </form>
+
+      <!-- FORMULARIO 2: URL M3U -->
+      <form id="formM3u" class="hidden" onsubmit="iniciarSesionM3u(event)">
+        <div class="input-group">
+          <label>URL de la lista M3U / M3U8</label>
+          <input type="url" id="m3uUrl" placeholder="http://dominio.com/get.php?username=..." required>
+        </div>
+        <button type="submit" class="btn-login">🚀 Cargar Lista M3U</button>
+      </form>
+
+      <div id="errorMessage" class="error-box hidden"></div>
     </div>
   </div>
 
-  <!-- INTERFAZ PRINCIPAL (ESTILO IPTV SMARTERS) -->
+  <!-- DASHBOARD ESTILO SMARTERS -->
   <div id="appContainer" class="app-container hidden">
-    <!-- ENCABEZADO SUPERIOR -->
     <header class="top-bar">
       <div class="brand-box">
-        <img src="logo.png" alt="Don Streaming" class="header-logo">
+        <img src="logo.png" alt="Don Streaming" class="header-logo" onerror="this.src='lgo.png'">
         <span class="brand-title">Don Streaming</span>
       </div>
       <div class="info-box">
         <span id="clockDisplay">12:00 PM</span>
-        <span id="expDisplay">Expiration: --</span>
         <button onclick="cerrarSesion()" class="btn-logout">Cerrar Sesión</button>
       </div>
     </header>
 
-    <!-- GRILLA DE DASHBOARD -->
     <main class="smarters-grid">
-      <!-- BOTÓN LIVE TV -->
-      <div class="tile tile-live" onclick="abrirSeccion('live')">
+      <div class="tile tile-live">
         <div class="tile-icon">📺</div>
         <div class="tile-title">LIVE TV</div>
       </div>
-
-      <!-- BOTÓN MOVIES -->
-      <div class="tile tile-movies" onclick="abrirSeccion('vod')">
+      <div class="tile tile-movies">
         <div class="tile-icon">🎬</div>
         <div class="tile-title">MOVIES</div>
       </div>
-
-      <!-- BOTÓN SERIES -->
-      <div class="tile tile-series" onclick="abrirSeccion('series')">
+      <div class="tile tile-series">
         <div class="tile-icon">🎞️</div>
         <div class="tile-title">SERIES</div>
       </div>
-
-      <!-- BOTÓN CATCH UP -->
-      <div class="tile tile-small" onclick="abrirSeccion('catchup')">
+      <div class="tile tile-small">
         <div class="tile-icon">⏱️</div>
         <div class="tile-title-small">CATCH UP</div>
       </div>
-
-      <!-- BOTÓN MULTISCREEN -->
-      <div class="tile tile-small" onclick="abrirSeccion('multiscreen')">
+      <div class="tile tile-small">
         <div class="tile-icon">🖥️</div>
         <div class="tile-title-small">MULTISCREEN</div>
       </div>
-
-      <!-- BOTÓN SETTINGS -->
-      <div class="tile tile-small" onclick="abrirSeccion('settings')">
+      <div class="tile tile-small">
         <div class="tile-icon">⚙️</div>
         <div class="tile-title-small">SETTINGS</div>
       </div>
     </main>
 
-    <!-- FOOTER USUARIO -->
     <footer class="footer-bar">
-      <span id="userLogged">Logged in : --</span>
+      <span id="userLogged">Logged in : Demo</span>
     </footer>
   </div>
 
