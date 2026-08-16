@@ -9,36 +9,63 @@ body {
   background: radial-gradient(circle at center, #132247 0%, #060b18 100%);
   color: #ffffff;
   min-height: 100vh;
-  overflow: hidden;
 }
 
-.hidden {
-  display: none !important;
-}
+.hidden { display: none !important; }
 
-/* LOGIN */
+/* CONTAINER LOGIN */
 .login-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
+  padding: 20px;
 }
 
 .login-card {
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  padding: 40px;
+  padding: 35px;
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   text-align: center;
   box-shadow: 0 20px 40px rgba(0,0,0,0.6);
 }
 
 .login-logo {
   max-width: 180px;
+  max-height: 140px;
+  width: auto;
   height: auto;
-  margin-bottom: 15px;
+  object-fit: contain;
+  margin-bottom: 10px;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  background: rgba(255,255,255,0.05);
+  padding: 5px;
+  border-radius: 10px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.tab-btn.active {
+  background: #6366f1;
+  color: #ffffff;
 }
 
 .input-group {
@@ -75,7 +102,17 @@ body {
   margin-top: 10px;
 }
 
-/* INTERFAZ ESTILO SMARTERS */
+.error-box {
+  margin-top: 15px;
+  padding: 10px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+/* INTERFAZ PRINCIPAL TIPO SMARTERS */
 .app-container {
   display: flex;
   flex-direction: column;
@@ -83,12 +120,11 @@ body {
   padding: 25px 40px;
 }
 
-/* ENCABEZADO CON LOGO DESTACADO */
 .top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 25px;
 }
 
 .brand-box {
@@ -98,24 +134,20 @@ body {
 }
 
 .header-logo {
-  height: 75px; /* Logo grande e impactante */
+  height: 75px;
   width: auto;
   object-fit: contain;
-  filter: drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.5));
 }
 
 .brand-title {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: bold;
-  letter-spacing: 1px;
 }
 
 .info-box {
   display: flex;
   align-items: center;
   gap: 20px;
-  color: #cbd5e1;
-  font-size: 15px;
 }
 
 .btn-logout {
@@ -128,7 +160,6 @@ body {
   font-weight: bold;
 }
 
-/* GRILLA DE PANELES */
 .smarters-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
@@ -145,52 +176,25 @@ body {
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease;
   box-shadow: 0 8px 20px rgba(0,0,0,0.4);
 }
 
-.tile:hover {
-  transform: scale(1.02);
-  box-shadow: 0 12px 25px rgba(0,0,0,0.6);
-}
+.tile:hover { transform: scale(1.02); }
 
-/* COLORES DE PANELES */
 .tile-live {
   grid-row: span 2;
   background: linear-gradient(180deg, #10b981 0%, #0369a1 100%);
 }
 
-.tile-movies {
-  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
-}
+.tile-movies { background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%); }
+.tile-series { background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); }
+.tile-small { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
 
-.tile-series {
-  background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
-}
+.tile-icon { font-size: 50px; margin-bottom: 10px; }
+.tile-title { font-size: 22px; font-weight: bold; }
+.tile-title-small { font-size: 15px; font-weight: 600; color: #94a3b8; }
 
-.tile-small {
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.tile-icon {
-  font-size: 55px;
-  margin-bottom: 10px;
-}
-
-.tile-title {
-  font-size: 22px;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-
-.tile-title-small {
-  font-size: 16px;
-  font-weight: 600;
-  color: #94a3b8;
-}
-
-/* FOOTER */
 .footer-bar {
   display: flex;
   justify-content: flex-end;
