@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Don Streaming IPTV</title>
   <link rel="stylesheet" href="styles.css">
+  <!-- Reproductor HLS para flujos de video .m3u8 / IPTV -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
 
-  <!-- LOGIN MULTI-INGRESO -->
+  <!-- PANTALLA DE LOGIN -->
   <div id="loginScreen" class="login-container">
     <div class="login-card">
       <img src="logo.png" alt="Don Streaming" class="login-logo" onerror="this.src='lgo.png'">
@@ -21,7 +22,7 @@
         <button type="button" id="tabM3u" class="tab-btn" onclick="cambiarMetodo('m3u')">🔗 URL M3U</button>
       </div>
 
-      <!-- FORMULARIO 1: XTREAM CODES -->
+      <!-- FORMULARIO XTREAM -->
       <form id="formXtream" onsubmit="iniciarSesionXtream(event)">
         <div class="input-group">
           <label>URL del Servidor / DNS</label>
@@ -38,7 +39,7 @@
         <button type="submit" class="btn-login">🚀 Iniciar Sesión</button>
       </form>
 
-      <!-- FORMULARIO 2: URL M3U -->
+      <!-- FORMULARIO M3U -->
       <form id="formM3u" class="hidden" onsubmit="iniciarSesionM3u(event)">
         <div class="input-group">
           <label>URL de la lista M3U / M3U8</label>
@@ -51,7 +52,7 @@
     </div>
   </div>
 
-  <!-- DASHBOARD ESTILO SMARTERS -->
+  <!-- DASHBOARD PRINCIPAL (TIPO SMARTERS) -->
   <div id="appContainer" class="app-container hidden">
     <header class="top-bar">
       <div class="brand-box">
@@ -65,27 +66,27 @@
     </header>
 
     <main class="smarters-grid">
-      <div class="tile tile-live">
+      <div class="tile tile-live" onclick="abrirSeccion('live')">
         <div class="tile-icon">📺</div>
         <div class="tile-title">LIVE TV</div>
       </div>
-      <div class="tile tile-movies">
+      <div class="tile tile-movies" onclick="abrirSeccion('movies')">
         <div class="tile-icon">🎬</div>
         <div class="tile-title">MOVIES</div>
       </div>
-      <div class="tile tile-series">
+      <div class="tile tile-series" onclick="abrirSeccion('series')">
         <div class="tile-icon">🎞️</div>
         <div class="tile-title">SERIES</div>
       </div>
-      <div class="tile tile-small">
+      <div class="tile tile-small" onclick="alert('Sección en mantenimiento')">
         <div class="tile-icon">⏱️</div>
         <div class="tile-title-small">CATCH UP</div>
       </div>
-      <div class="tile tile-small">
+      <div class="tile tile-small" onclick="alert('Sección en mantenimiento')">
         <div class="tile-icon">🖥️</div>
         <div class="tile-title-small">MULTISCREEN</div>
       </div>
-      <div class="tile tile-small">
+      <div class="tile tile-small" onclick="alert('Ajustes del sistema')">
         <div class="tile-icon">⚙️</div>
         <div class="tile-title-small">SETTINGS</div>
       </div>
@@ -94,6 +95,36 @@
     <footer class="footer-bar">
       <span id="userLogged">Logged in : Demo</span>
     </footer>
+  </div>
+
+  <!-- VISTA DE CANALES Y REPRODUCTOR INTEGRADO -->
+  <div id="playerView" class="player-view hidden">
+    <header class="player-header">
+      <button onclick="volverAlMenu()" class="btn-back">⬅️ Volver al Menú</button>
+      <h3 id="sectionTitle">Canales de TV</h3>
+    </header>
+
+    <div class="player-content">
+      <!-- SIDEBAR DE CATEGORÍAS Y CANALES -->
+      <aside class="channel-sidebar">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="🔍 Buscar canal o película..." oninput="filtrarCanales()">
+        </div>
+        <div id="channelList" class="channel-list">
+          <p class="loading-text">Cargando lista...</p>
+        </div>
+      </aside>
+
+      <!-- ÁREA DEL REPRODUCTOR DE VIDEO -->
+      <main class="video-container">
+        <div class="video-wrapper">
+          <video id="mainVideoPlayer" controls autoplay playsinline></video>
+        </div>
+        <div class="now-playing">
+          <h4 id="currentChannelTitle">Selecciona un canal para reproducir</h4>
+        </div>
+      </main>
+    </div>
   </div>
 
   <script src="app.js"></script>
