@@ -3,82 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Don Streaming IPTV</title>
+  <title>Don Streaming Player</title>
   
+  <!-- HLS Player Engine -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background: #080c14; color: #ffffff; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
+    body { background: #080c14; color: #ffffff; min-height: 100vh; overflow: hidden; }
     .hidden { display: none !important; }
 
+    /* PANTALLA LOGIN / CONFIGURACIÓN LOGO */
+    .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: radial-gradient(circle, #1e293b 0%, #080c14 100%); }
     .app-card {
-      background: #0f172a;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 20px;
-      padding: 25px;
-      width: 100%;
-      max-width: 500px;
-      text-align: center;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px;
+      padding: 30px; width: 100%; max-width: 450px; text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
     }
 
-    .logo-box {
-      width: 70px; height: 70px; margin: 0 auto 12px auto;
-      background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
-      border-radius: 18px; display: flex; justify-content: center; align-items: center;
-      font-size: 26px; font-weight: 900; box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
-    }
-
-    h2 { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
-    .subtitle { font-size: 12px; color: #64748b; margin-bottom: 15px; }
-
-    .nav-tabs { display: flex; gap: 5px; margin-bottom: 18px; background: #1e293b; padding: 4px; border-radius: 10px; }
-    .nav-btn { flex: 1; padding: 8px 5px; border: none; background: transparent; color: #94a3b8; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 11px; }
-    .nav-btn.active { background: #6366f1; color: #ffffff; }
+    .brand-logo-preview { width: 100px; height: 100px; object-fit: contain; margin: 0 auto 15px auto; border-radius: 12px; background: #1e293b; padding: 5px; border: 1px solid #334155; }
+    h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { font-size: 12px; color: #64748b; margin-bottom: 20px; }
 
     .input-group { text-align: left; margin-bottom: 10px; }
-    .input-group label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
-    .input-group input { width: 100%; padding: 9px; border-radius: 8px; border: 1px solid #334155; background: #090d16; color: #fff; font-size: 12px; }
+    .input-group label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; }
+    .input-group input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #090d16; color: #fff; font-size: 12px; outline: none; }
+    .input-group input:focus { border-color: #6366f1; }
 
-    .btn-action { width: 100%; padding: 11px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none; border-radius: 9px; color: #fff; font-weight: bold; font-size: 13px; cursor: pointer; margin-top: 5px; }
+    .btn-action { width: 100%; padding: 12px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none; border-radius: 10px; color: #fff; font-weight: bold; font-size: 14px; cursor: pointer; margin-top: 10px; transition: transform 0.2s; }
+    .btn-action:hover { transform: scale(1.02); }
 
-    .status-msg { margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 11px; word-break: break-all; }
+    .status-msg { margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 12px; }
     .status-success { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
     .status-error { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; }
 
-    /* REPRODUCTOR */
-    .player-view { width: 100vw; height: 100vh; display: flex; flex-direction: column; background: #000; position: fixed; top: 0; left: 0; z-index: 999; }
-    .player-header { padding: 10px 18px; background: #0f172a; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; }
-    .btn-back { background: #ef4444; border: none; color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
+    /* REPRODUCTOR ESTILO SMARTERS PRO */
+    .player-view { width: 100vw; height: 100vh; display: flex; flex-direction: column; background: #000; position: fixed; top: 0; left: 0; z-index: 9999; }
+    .player-header { padding: 10px 20px; background: #0f172a; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; }
+    .header-brand { display: flex; align-items: center; gap: 12px; }
+    .header-logo { height: 35px; width: auto; max-width: 120px; object-fit: contain; }
+    .btn-back { background: #ef4444; border: none; color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; }
+
     .player-content { display: flex; flex: 1; overflow: hidden; }
-    .channel-sidebar { width: 300px; background: #0f172a; padding: 12px; display: flex; flex-direction: column; border-right: 1px solid #1e293b; }
-    .channel-list { flex: 1; overflow-y: auto; margin-top: 10px; }
-    .channel-item { padding: 10px; border-radius: 6px; cursor: pointer; background: rgba(255,255,255,0.03); margin-bottom: 5px; font-size: 12px; text-align: left; }
+    .channel-sidebar { width: 320px; background: #0f172a; padding: 12px; display: flex; flex-direction: column; border-right: 1px solid #1e293b; }
+    .search-box { width: 100%; padding: 9px; border-radius: 8px; border: 1px solid #334155; background: #090d16; color: #fff; font-size: 12px; margin-bottom: 10px; }
+    .channel-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+
+    .channel-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.03); border: 1px solid transparent; transition: all 0.2s; }
     .channel-item:hover, .channel-item.active { background: #6366f1; color: #fff; font-weight: bold; }
-    .video-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; padding: 15px; }
-    video { width: 100%; max-height: 80vh; background: #050505; border-radius: 8px; }
+    .channel-icon { width: 38px; height: 38px; border-radius: 6px; object-fit: contain; background: #1e293b; padding: 2px; }
+    .channel-name { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+
+    /* ÁREA DE VIDEO Y BOTÓN DE PANTALLA COMPLETA */
+    .video-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; position: relative; }
+    video { width: 100%; height: 100%; max-height: 85vh; background: #000; }
+
+    .video-controls-overlay { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 10; }
+    .btn-fullscreen { background: rgba(99, 102, 241, 0.8); border: none; color: #fff; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; backdrop-filter: blur(5px); }
+    .btn-fullscreen:hover { background: #6366f1; }
   </style>
 </head>
 <body>
 
-  <div id="mainScreen" class="app-card">
-    <div class="logo-box">DS</div>
-    <h2>Don Streaming IPTV</h2>
-    <p class="subtitle">Plataforma Multidispositivo de Reproducción</p>
+  <!-- PANTALLA DE CONFIGURACIÓN E INGRESO -->
+  <div id="mainScreen" class="login-container">
+    <div class="app-card">
+      <img id="logoPreview" src="https://via.placeholder.com/100?text=DON+STREAMING" class="brand-logo-preview" alt="Logo Business">
+      
+      <h2>Don Streaming Player</h2>
+      <p class="subtitle">Panel de Reproducción IPTV</p>
 
-    <div class="nav-tabs">
-      <button class="nav-btn active" id="btnTabXtream" onclick="switchMainTab('xtream')">🔑 Xtream API</button>
-      <button class="nav-btn" id="btnTabFile" onclick="switchMainTab('file')">📁 Archivo M3U</button>
-      <button class="nav-btn" id="btnTabAdmin" onclick="switchMainTab('admin')">🔐 Panel Admin</button>
-    </div>
-
-    <!-- INGRESO POR XTREAM CODES (USUARIO / CLAVE / URL) -->
-    <div id="xtreamView">
       <div class="input-group">
-        <label>Servidor / URL Host:</label>
+        <label>URL del Logo Personalizado (Opcional):</label>
+        <input type="text" id="customLogoUrl" placeholder="https://tu-imagen.com/logo.png" oninput="actualizarLogoPreview()">
+      </div>
+
+      <div class="input-group">
+        <label>Servidor / Host:</label>
         <input type="text" id="xtreamHost" value="http://aioplus.es:80">
       </div>
       <div class="input-group">
@@ -89,53 +90,35 @@
         <label>Contraseña:</label>
         <input type="password" id="xtreamPass" value="MAURO121672">
       </div>
-      <button class="btn-action" onclick="conectarXtreamAPI()">🚀 Ingresar con Credenciales</button>
+
+      <button class="btn-action" onclick="conectarXtreamAPI()">🚀 Cargar Lista de Canales</button>
+
+      <div id="statusBox" class="status-msg hidden"></div>
     </div>
-
-    <!-- INGRESO POR ARCHIVO LOCAL M3U -->
-    <div id="fileView" class="hidden">
-      <div class="input-group">
-        <label>Selecciona un archivo .m3u de tu dispositivo:</label>
-        <input type="file" id="m3uFileInput" accept=".m3u,.m3u8" style="padding: 5px; background: #1e293b; color: #fff;">
-      </div>
-      <button class="btn-action" style="background: #0284c7;" onclick="cargarArchivoM3uLocal()">📂 Cargar Lista desde Archivo</button>
-    </div>
-
-    <!-- PANEL ADMIN -->
-    <div id="adminView" class="hidden">
-      <div id="adminAuth">
-        <div class="input-group">
-          <label>Clave de Administrador:</label>
-          <input type="password" id="adminPass" placeholder="1234">
-        </div>
-        <button class="btn-action" onclick="ingresarAdmin()">Acceder al Panel</button>
-      </div>
-
-      <div id="adminPanel" class="hidden">
-        <p style="font-size: 11px; color: #38bdf8; margin-bottom: 10px;">Panel listo para gestión de conexiones.</p>
-        <button class="btn-action" style="background: #10b981;" onclick="switchMainTab('xtream')">Volver al Inicio</button>
-      </div>
-    </div>
-
-    <div id="statusBox" class="status-msg hidden"></div>
   </div>
 
   <!-- REPRODUCTOR -->
   <div id="playerView" class="player-view hidden">
     <header class="player-header">
-      <h3 id="playerTitle">📺 Don Streaming Player</h3>
-      <button onclick="cerrarReproductor()" class="btn-back">🚪 Salir / Desconectar</button>
+      <div class="header-brand">
+        <img id="appHeaderLogo" src="https://via.placeholder.com/100?text=DS" class="header-logo" alt="Logo Header">
+        <h3 id="playerTitle">Don Streaming IPTV</h3>
+      </div>
+      <button onclick="cerrarReproductor()" class="btn-back">🚪 Salir</button>
     </header>
 
     <div class="player-content">
       <aside class="channel-sidebar">
-        <input type="text" id="searchChannel" placeholder="🔍 Buscar canal..." oninput="filtrarCanales()" style="padding:8px; border-radius:6px; border:1px solid #334155; background:#090d16; color:#fff; width:100%;">
+        <input type="text" id="searchChannel" class="search-box" placeholder="🔍 Buscar canal..." oninput="filtrarCanales()">
         <div id="channelList" class="channel-list"></div>
       </aside>
 
-      <main class="video-container">
+      <main class="video-container" id="videoWrapper">
         <video id="videoPlayer" controls autoplay playsinline></video>
-        <h4 id="activeChannelName" style="margin-top:12px; color:#38bdf8;">Selecciona un canal para reproducir</h4>
+        
+        <div class="video-controls-overlay">
+          <button class="btn-fullscreen" onclick="togglePantallaCompleta()">⛶ Pantalla Completa</button>
+        </div>
       </main>
     </div>
   </div>
@@ -144,33 +127,25 @@
     let loadedChannels = [];
     let hls = null;
 
-    function switchMainTab(tab) {
-      document.getElementById('xtreamView').classList.toggle('hidden', tab !== 'xtream');
-      document.getElementById('fileView').classList.toggle('hidden', tab !== 'file');
-      document.getElementById('adminView').classList.toggle('hidden', tab !== 'admin');
-
-      document.getElementById('btnTabXtream').classList.toggle('active', tab === 'xtream');
-      document.getElementById('btnTabFile').classList.toggle('active', tab === 'file');
-      document.getElementById('btnTabAdmin').classList.toggle('active', tab === 'admin');
-      hideStatus();
+    function actualizarLogoPreview() {
+      const url = document.getElementById('customLogoUrl').value.trim();
+      const defaultLogo = 'https://via.placeholder.com/100?text=DON+STREAMING';
+      document.getElementById('logoPreview').src = url || defaultLogo;
+      document.getElementById('appHeaderLogo').src = url || defaultLogo;
     }
 
-    // CONEXIÓN VÍA XTREAM CODES (USUARIO, CONTRASEÑA, HOST)
     async function conectarXtreamAPI() {
       let host = document.getElementById('xtreamHost').value.trim();
       const user = document.getElementById('xtreamUser').value.trim();
       const pass = document.getElementById('xtreamPass').value.trim();
 
-      if (!host || !user || !pass) return showStatus('Por favor completa Servidor, Usuario y Contraseña.', 'error');
+      if (!host || !user || !pass) return showStatus('Completa Servidor, Usuario y Contraseña', 'error');
 
-      if (!host.startsWith('http://') && !host.startsWith('https://')) {
-        host = 'http://' + host;
-      }
+      if (!host.startsWith('http://') && !host.startsWith('https://')) host = 'http://' + host;
       if (host.endsWith('/')) host = host.slice(0, -1);
 
-      showStatus('⏳ Validando usuario y obteniendo lista de canales...', 'success');
+      showStatus('⏳ Conectando y obteniendo lista de canales con logos...', 'success');
 
-      // Intentar conexión usando la API ligera JSON
       const targetApi = `${host}/player_api.php?username=${user}&password=${pass}&action=get_live_streams`;
       
       try {
@@ -181,70 +156,17 @@
           if (Array.isArray(streams) && streams.length > 0) {
             loadedChannels = streams.map(s => ({
               name: s.name,
-              url: `${host}/live/${user}/${pass}/${s.stream_id}.m3u8`
+              icon: s.stream_icon || 'https://via.placeholder.com/38?text=TV',
+              rawUrl: `${host}/live/${user}/${pass}/${s.stream_id}.m3u8`
             }));
-            showStatus(`¡Éxito! Cargados ${loadedChannels.length} canales.`, 'success');
-            setTimeout(() => abrirReproductor(), 500);
+            showStatus(`¡Éxito! ${loadedChannels.length} canales listos.`, 'success');
+            setTimeout(() => abrirReproductor(), 400);
             return;
           }
         }
       } catch(e) {}
 
-      showStatus('❌ Error al conectar con el servidor Xtream. Verifica el usuario, contraseña o si el servidor está en línea.', 'error');
-    }
-
-    // CARGAR ARCHIVO M3U DESDE LA COMPUTADORA O CELULAR
-    function cargarArchivoM3uLocal() {
-      const fileInput = document.getElementById('m3uFileInput');
-      const file = fileInput.files[0];
-
-      if (!file) return showStatus('Por favor selecciona un archivo .m3u', 'error');
-
-      showStatus('⏳ Leyendo archivo local...', 'success');
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const text = e.target.result;
-        loadedChannels = parseM3U(text);
-        if (loadedChannels.length > 0) {
-          showStatus(`¡Éxito! ${loadedChannels.length} canales cargados desde el archivo.`, 'success');
-          setTimeout(() => abrirReproductor(), 500);
-        } else {
-          showStatus('El archivo no contiene canales válidos.', 'error');
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    function parseM3U(text) {
-      const lines = text.split(/\r?\n/);
-      const channels = [];
-      let lastExt = null;
-
-      lines.forEach(line => {
-        line = line.trim();
-        if (line.startsWith('#EXTINF:')) {
-          lastExt = line;
-        } else if (line.startsWith('http')) {
-          let name = 'Canal';
-          if (lastExt) {
-            const idx = lastExt.lastIndexOf(',');
-            if (idx !== -1) name = lastExt.substring(idx + 1).trim();
-          }
-          channels.push({ name, url: line });
-          lastExt = null;
-        }
-      });
-      return channels;
-    }
-
-    function ingresarAdmin() {
-      if (document.getElementById('adminPass').value === '1234') {
-        document.getElementById('adminAuth').classList.add('hidden');
-        document.getElementById('adminPanel').classList.remove('hidden');
-      } else {
-        showStatus('Clave incorrecta', 'error');
-      }
+      showStatus('❌ Error de conexión o credenciales vencidas.', 'error');
     }
 
     function abrirReproductor() {
@@ -266,7 +188,10 @@
       lista.slice(0, 300).forEach(item => {
         const div = document.createElement('div');
         div.className = 'channel-item';
-        div.innerText = `📺 ${item.name}`;
+        div.innerHTML = `
+          <img src="${item.icon}" class="channel-icon" onerror="this.src='https://via.placeholder.com/38?text=TV'">
+          <span class="channel-name">${item.name}</span>
+        `;
         div.onclick = () => reproducirCanal(item, div);
         container.appendChild(div);
       });
@@ -281,19 +206,31 @@
     function reproducirCanal(item, element) {
       document.querySelectorAll('.channel-item').forEach(e => e.classList.remove('active'));
       if (element) element.classList.add('active');
-      document.getElementById('activeChannelName').innerText = item.name;
+      
       const video = document.getElementById('videoPlayer');
-
       if (hls) hls.destroy();
+
+      // Proxy HLS que resuelve la restricción HTTP/HTTPS
+      const proxiedStream = `https://corsproxy.io/?${encodeURIComponent(item.rawUrl)}`;
 
       if (Hls.isSupported()) {
         hls = new Hls({ enableWorker: true });
-        hls.loadSource(item.url);
+        hls.loadSource(proxiedStream);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
       } else {
-        video.src = item.url;
+        video.src = proxiedStream;
         video.play().catch(() => {});
+      }
+    }
+
+    function togglePantallaCompleta() {
+      const elem = document.getElementById('videoWrapper');
+      if (!document.fullscreenElement) {
+        if (elem.requestFullscreen) elem.requestFullscreen();
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
       }
     }
 
@@ -302,10 +239,6 @@
       box.innerText = msg;
       box.className = `status-msg ${type === 'success' ? 'status-success' : 'status-error'}`;
       box.classList.remove('hidden');
-    }
-
-    function hideStatus() {
-      document.getElementById('statusBox').classList.add('hidden');
     }
   </script>
 </body>
