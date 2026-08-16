@@ -1,4 +1,4 @@
-﻿// VARIABLES GLOBALES DE SESIÓN
+// VARIABLES GLOBALES DE SESIÓN
 let session = {
   type: null,
   server: '',
@@ -46,7 +46,6 @@ function iniciarSesionXtream(e) {
   session.user = user;
   session.pass = pass;
 
-  // Construir URL M3U derivada de los datos Xtream
   session.m3uUrl = `${server}/get.php?username=${user}&password=${pass}&type=m3u_plus`;
 
   cargarListaIPTV(session.m3uUrl, user);
@@ -63,7 +62,7 @@ function iniciarSesionM3u(e) {
   cargarListaIPTV(url, 'Usuario M3U');
 }
 
-// CARGA Y PARSEO DE LA LISTA DE CANALES
+// CARGA Y PARSEO DE LA LISTA
 function cargarListaIPTV(url, usuario) {
   const errorBox = document.getElementById('errorMessage');
   errorBox.classList.add('hidden');
@@ -72,14 +71,14 @@ function cargarListaIPTV(url, usuario) {
 
   fetch(proxyUrl)
     .then(res => {
-      if (!res.ok) throw new Error('No se pudo conectar a la lista IPTV.');
+      if (!res.ok) throw new Error('No se pudo descargar la lista del servidor.');
       return res.text();
     })
     .then(textData => {
-      session.channels = parseM3U(textData);
+      session.channels = parseM3UFlex(textData);
 
       if (session.channels.length === 0) {
-        throw new Error('La lista no contiene canales reproducibles.');
+        throw new Error('La lista no contiene enlaces reproducibles válidos.');
       }
 
       document.getElementById('loginScreen').classList.add('hidden');
@@ -87,38 +86,52 @@ function cargarListaIPTV(url, usuario) {
       document.getElementById('userLogged').innerText = `Logged in : ${usuario}`;
     })
     .catch(err => {
-      errorBox.innerText = err.message || 'Error al conectar. Verifica tus datos.';
+      errorBox.innerText = err.message || 'Error de conexión. Verifica la lista o credenciales.';
       errorBox.classList.remove('hidden');
     });
 }
 
-// PARSEADOR DE CONTENIDO M3U
-function parseM3U(m3uText) {
-  const lines = m3uText.split('\n');
+// PARSEADOR ULTRA FLEXIBLE (ACEPTA CUALQUIER FORMATO M3U)
+function parseM3UFlex(m3uText) {
+  const lines = m3uText.split(/\r?\n/);
   const channels = [];
-  let currentChannel = {};
+  let lastExtInf = null;
 
-  lines.forEach(line => {
-    line = line.trim();
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+    if (!line) continue;
+
     if (line.startsWith('#EXTINF:')) {
-      const titleMatch = line.match(/,(.+)$/);
-      const groupMatch = line.match(/group-title="([^"]+)"/);
-      
-      currentChannel = {
-        name: titleMatch ? titleMatch[1].trim() : 'Canal Sin Nombre',
-        category: groupMatch ? groupMatch[1].trim() : 'General'
-      };
-    } else if (line.startsWith('http://') || line.startsWith('https://')) {
-      currentChannel.url = line;
-      channels.push(currentChannel);
-      currentChannel = {};
+      lastExtInf = line;
+    } else if (line.startsWith('http://') || line.startsWith('https://') || line.includes('://')) {
+      let name = 'Canal ' + (channels.length + 1);
+      let category = 'General';
+
+      if (lastExtInf) {
+        const commaIdx = lastExtInf.lastIndexOf(',');
+        if (commaIdx !== -1) {
+          name = lastExtInf.substring(commaIdx + 1).trim() || name;
+        }
+        const groupMatch = lastExtInf.match(/group-title="([^"]+)"/i);
+        if (groupMatch) {
+          category = groupMatch[1].trim();
+        }
+      }
+
+      channels.push({
+        name: name,
+        category: category,
+        url: line
+      });
+
+      lastExtInf = null;
     }
-  });
+  }
 
   return channels;
 }
 
-// ABRIR SECCIONES (LIVE TV / MOVIES / SERIES)
+// ABRIR VISTA PRINCIPAL
 function abrirSeccion(tipo) {
   document.getElementById('appContainer').classList.add('hidden');
   document.getElementById('playerView').classList.remove('hidden');
@@ -131,17 +144,20 @@ function abrirSeccion(tipo) {
   renderizarCanales(session.channels);
 }
 
-// RENDERIZAR LISTA EN EL SIDEBAR
+// RENDERIZAR CANALES EN EL MENÚ LATERAL
 function renderizarCanales(lista) {
   const listContainer = document.getElementById('channelList');
   listContainer.innerHTML = '';
 
   if (lista.length === 0) {
-    listContainer.innerHTML = '<p class="loading-text">No se encontraron canales.</p>';
+    listContainer.innerHTML = '<p class="loading-text">No se encontraron elementos.</p>';
     return;
   }
 
-  lista.forEach((item, index) => {
+  // Cargar primeros 300 elementos para evitar sobrecargar la vista
+  const limite = lista.slice(0, 300);
+
+  limite.forEach((item) => {
     const div = document.createElement('div');
     div.className = 'channel-item';
     div.innerHTML = `
@@ -153,14 +169,14 @@ function renderizarCanales(lista) {
   });
 }
 
-// BUSCADOR EN TIEMPO REAL
+// FILTRAR POR BÚSQUEDA
 function filtrarCanales() {
   const query = document.getElementById('searchInput').value.toLowerCase();
   const filtrados = session.channels.filter(c => c.name.toLowerCase().includes(query));
   renderizarCanales(filtrados);
 }
 
-// REPRODUCCIÓN DE VIDEO CON HLS.JS
+// REPRODUCIR STREAM DE VIDEO
 function reproducirCanal(canal, elementoHtml) {
   document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
   if (elementoHtml) elementoHtml.classList.add('active');
@@ -193,7 +209,7 @@ function reproducirCanal(canal, elementoHtml) {
   }
 }
 
-// NAVEGACIÓN Y CERRAR SESIÓN
+// NAVEGACIÓN
 function volverAlMenu() {
   const video = document.getElementById('mainVideoPlayer');
   video.pause();
@@ -209,7 +225,6 @@ function cerrarSesion() {
   document.getElementById('loginScreen').classList.remove('hidden');
 }
 
-// RELOJ DENTRO DEL DASHBOARD
 setInterval(() => {
   const clock = document.getElementById('clockDisplay');
   if (clock) {
