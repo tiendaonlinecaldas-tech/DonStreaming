@@ -9,27 +9,47 @@
 </head>
 <body>
 
-  <!-- PANTALLA DE LOGIN UNIFICADA -->
+  <!-- PANTALLA DE LOGIN CON MÁC VIRTUAL Y AMBAS OPCIONES -->
   <div id="loginScreen" class="login-container">
     <div class="login-card">
       <img src="logo.png" alt="Don Streaming" class="login-logo" onerror="this.src='lgo.png'">
       <h2>Don Streaming IPTV</h2>
-      <p class="login-subtitle">Ingresa las credenciales de tu servicio</p>
+      <p class="login-subtitle">Plataforma Segura de Reproducción Streaming</p>
 
-      <form id="formLogin" onsubmit="iniciarSesion(event)">
+      <div class="mac-badge">
+        <span>🖥️ MAC ID del Dispositivo:</span>
+        <strong id="deviceMacDisplay">00:1A:79:XX:XX:XX</strong>
+      </div>
+
+      <div class="auth-tabs">
+        <button type="button" id="tabXtream" class="tab-btn active" onclick="cambiarMetodo('xtream')">🔑 Xtream API</button>
+        <button type="button" id="tabM3u" class="tab-btn" onclick="cambiarMetodo('m3u')">🔗 URL M3U</button>
+      </div>
+
+      <!-- FORMULARIO XTREAM CODES -->
+      <form id="formXtream" onsubmit="iniciarSesionXtream(event)">
         <div class="input-group">
           <label>URL del Servidor / Host</label>
-          <input type="text" id="serverUrl" placeholder="http://ejemplo.com:80" required>
+          <input type="text" id="serverUrl" placeholder="http://dominio.com:80" required>
         </div>
         <div class="input-group">
-          <label>Usuario</label>
-          <input type="text" id="username" placeholder="Tu usuario" required>
+          <label>Usuario IPTV</label>
+          <input type="text" id="username" placeholder="Usuario" required>
         </div>
         <div class="input-group">
           <label>Contraseña</label>
-          <input type="password" id="password" placeholder="Tu contraseña" required>
+          <input type="password" id="password" placeholder="Contraseña" required>
         </div>
-        <button type="submit" class="btn-login">🚀 Iniciar Sesión</button>
+        <button type="submit" class="btn-login">🚀 Iniciar Sesión con Credenciales</button>
+      </form>
+
+      <!-- FORMULARIO LISTA M3U -->
+      <form id="formM3u" class="hidden" onsubmit="iniciarSesionM3u(event)">
+        <div class="input-group">
+          <label>URL de la Lista M3U / M3U8</label>
+          <input type="url" id="m3uUrl" placeholder="http://dominio.com/get.php?username=..." required>
+        </div>
+        <button type="submit" class="btn-login">🚀 Cargar Lista M3U Directa</button>
       </form>
 
       <div id="errorMessage" class="error-box hidden"></div>
@@ -53,57 +73,70 @@
       <div class="tile tile-live" onclick="abrirSeccion('live')">
         <div class="tile-icon">📺</div>
         <div class="tile-title">LIVE TV</div>
+        <span class="tile-count" id="countLive">Cargando...</span>
       </div>
       <div class="tile tile-movies" onclick="abrirSeccion('movies')">
         <div class="tile-icon">🎬</div>
         <div class="tile-title">MOVIES</div>
+        <span class="tile-count" id="countMovies">Cargando...</span>
       </div>
       <div class="tile tile-series" onclick="abrirSeccion('series')">
         <div class="tile-icon">🎞️</div>
         <div class="tile-title">SERIES</div>
+        <span class="tile-count" id="countSeries">Cargando...</span>
       </div>
-      <div class="tile tile-small" onclick="alert('Sección en mantenimiento')">
+      <div class="tile tile-small" onclick="alert('Funcionalidad de Catch Up en actualización')">
         <div class="tile-icon">⏱️</div>
         <div class="tile-title-small">CATCH UP</div>
       </div>
-      <div class="tile tile-small" onclick="alert('Sección en mantenimiento')">
+      <div class="tile tile-small" onclick="alert('Multipantalla disponible próximamente')">
         <div class="tile-icon">🖥️</div>
         <div class="tile-title-small">MULTISCREEN</div>
       </div>
-      <div class="tile tile-small" onclick="alert('Ajustes del sistema')">
+      <div class="tile tile-small" onclick="alert('Ajustes del Sistema Don Streaming')">
         <div class="tile-icon">⚙️</div>
         <div class="tile-title-small">SETTINGS</div>
       </div>
     </main>
 
     <footer class="footer-bar">
-      <span id="userLogged">Logged in : Demo</span>
+      <span id="userLogged">Logged in : Demo</span> | <span id="macFooter">MAC: --</span>
     </footer>
   </div>
 
-  <!-- VISTA DEL REPRODUCTOR Y CANALES -->
+  <!-- VISTA PRINCIPAL CON CATEGORÍAS Y REPRODUCTOR -->
   <div id="playerView" class="player-view hidden">
     <header class="player-header">
       <button onclick="volverAlMenu()" class="btn-back">⬅️ Volver al Menú</button>
-      <h3 id="sectionTitle">Canales de TV</h3>
+      <h3 id="sectionTitle">Televisión en Vivo</h3>
     </header>
 
     <div class="player-content">
+      <!-- PANEL LATERAL DE CATEGORÍAS Y CONTENIDO -->
       <aside class="channel-sidebar">
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="🔍 Buscar canal o película..." oninput="filtrarCanales()">
+          <input type="text" id="searchInput" placeholder="🔍 Buscar canal, película o serie..." oninput="filtrarContenido()">
         </div>
+
+        <div class="category-selector-box">
+          <label for="categorySelect">Categoría / Grupo:</label>
+          <select id="categorySelect" onchange="seleccionarCategoria(this.value)">
+            <option value="ALL">Todas las Categorías</option>
+          </select>
+        </div>
+
         <div id="channelList" class="channel-list">
-          <p class="loading-text">Cargando lista...</p>
+          <p class="loading-text">Selecciona una categoría o busca un contenido...</p>
         </div>
       </aside>
 
+      <!-- ÁREA DE REPRODUCCIÓN -->
       <main class="video-container">
         <div class="video-wrapper">
           <video id="mainVideoPlayer" controls autoplay playsinline></video>
         </div>
         <div class="now-playing">
-          <h4 id="currentChannelTitle">Selecciona un canal para reproducir</h4>
+          <h4 id="currentChannelTitle">Selecciona un elemento para reproducir</h4>
         </div>
       </main>
     </div>
