@@ -1,166 +1,121 @@
-// ESTADO GLOBAL DE APLICACIÓN
+// ESTADO GLOBAL
 let state = {
-  server: '',
-  user: '',
-  pass: '',
-  m3uUrl: '',
-  mode: 'xtream', // 'xtream' | 'm3u'
-  liveCategories: [],
-  movieCategories: [],
-  seriesCategories: [],
-  liveStreams: [],
-  movieStreams: [],
-  seriesStreams: [],
-  activeType: 'live', // 'live' | 'movies' | 'series'
-  activeCategory: 'ALL'
+  liveCategories: [], movieCategories: [], seriesCategories: [],
+  liveStreams: [], movieStreams: [], seriesStreams: [],
+  activeType: 'live', activeCategory: 'ALL'
 };
 
 let hlsPlayer = null;
 
-// GENERADOR DE DIRECCIÓN MAC VIRTUAL ÚNICA POR NAVEGADOR
-function obtenerOcrearMAC() {
-  let mac = localStorage.getItem('donstreaming_mac');
-  if (!mac) {
-    const hexDigits = '0123456789ABCDEF';
-    let generated = '00:1A:79:';
-    for (let i = 0; i < 3; i++) {
-      generated += hexDigits[Math.floor(Math.random() * 16)];
-      generated += hexDigits[Math.floor(Math.random() * 16)];
-      if (i < 2) generated += ':';
-    }
-    mac = generated;
-    localStorage.setItem('donstreaming_mac', mac);
+// GENERAR MAC Y DEVICE KEY
+function initDispositivo() {
+  let mac = localStorage.getItem('ds_mac');
+  let key = localStorage.getItem('ds_key');
+  
+  if (!mac || !key) {
+    const hex = '0123456789ABCDEF';
+    mac = '00:1A:79:' + Array.from({length: 3}, () => hex[Math.floor(Math.random()*16)] + hex[Math.floor(Math.random()*16)]).join(':');
+    key = Math.floor(100000 + Math.random() * 900000).toString(); // PIN de 6 dígitos
+    localStorage.setItem('ds_mac', mac);
+    localStorage.setItem('ds_key', key);
   }
-  return mac;
-}
-
-// INICIALIZAR PANTALLA
-document.addEventListener('DOMContentLoaded', () => {
-  const mac = obtenerOcrearMAC();
+  
   document.getElementById('deviceMacDisplay').innerText = mac;
+  document.getElementById('deviceKeyDisplay').innerText = key;
   document.getElementById('macFooter').innerText = `MAC: ${mac}`;
-});
+}
 
-// PESTAÑAS LOGIN
+document.addEventListener('DOMContentLoaded', initDispositivo);
+
+// CAMBIAR PESTAÑAS LOGIN
 function cambiarMetodo(metodo) {
-  state.mode = metodo;
-  document.getElementById('formXtream').classList.toggle('hidden', metodo !== 'xtream');
-  document.getElementById('formM3u').classList.toggle('hidden', metodo !== 'm3u');
-  document.getElementById('tabXtream').classList.toggle('active', metodo === 'xtream');
-  document.getElementById('tabM3u').classList.toggle('active', metodo === 'm3u');
+  document.querySelectorAll('.form-section').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  
+  document.getElementById('tab' + metodo.charAt(0).toUpperCase() + metodo.slice(1)).classList.add('active');
+  document.getElementById('form' + metodo.charAt(0).toUpperCase() + metodo.slice(1)).classList.remove('hidden');
 }
 
-// LOGIN VIA XTREAM CODES (API CATEGORIZADA)
-function iniciarSesionXtream(e) {
-  e.preventDefault();
-  let server = document.getElementById('serverUrl').value.trim();
-  const user = document.getElementById('username').value.trim();
-  const pass = document.getElementById('password').value.trim();
-
-  if (!server.startsWith('http://') && !server.startsWith('https://')) {
-    server = 'http://' + server;
+// FETCH CON BYPASS PARA EVITAR BLOQUEOS (CORS)
+async function fetchSeguro(targetUrl) {
+  try {
+    // Usamos allorigins como proxy puente para evitar el bloqueo del navegador
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('Fallo el proxy');
+    return res;
+  } catch (e) {
+    // Fallback directo
+    return fetch(targetUrl);
   }
-  server = server.replace(/\/+$/, "");
-
-  state.server = server;
-  state.user = user;
-  state.pass = pass;
-
-  const apiUrl = `${server}/player_api.php?username=${user}&password=${pass}`;
-
-  fetchProxy(apiUrl)
-    .then(res => res.json())
-    .then(data => {
-      if (data.user_info && data.user_info.auth === 0) {
-        throw new Error('Usuario o Contraseña incorrectos.');
-      }
-      return cargarCategoriasYContenido(server, user, pass);
-    })
-    .then(() => {
-      mostrarDashboard(user);
-    })
-    .catch(err => {
-      // Fallback si la API de Xtream viene protegida
-      const m3uUrl = `${server}/get.php?username=${user}&password=${pass}&type=m3u_plus`;
-      cargarDesdeM3U(m3uUrl, user);
-    });
 }
 
-// LOGIN VIA LISTA M3U
-function iniciarSesionM3u(e) {
+// SIMULACIÓN DE ACTIVACIÓN REMOTA (Para tu panel)
+function verificarActivacionRemota() {
+  const errorBox = document.getElementById('errorMessage');
+  errorBox.classList.remove('hidden');
+  errorBox.style.color = '#fbbf24';
+  errorBox.style.borderColor = '#f59e0b';
+  errorBox.style.backgroundColor = 'rgba(245, 158, 11, 0.2)';
+  errorBox.innerText = 'Verificando con el servidor de Don Streaming... (Base de datos remota requerida para esta función)';
+  
+  // Aquí en el futuro conectaremos Firebase para que al hundir este botón, 
+  // descargue la lista que tú le asignaste a esa MAC desde tu PC.
+}
+
+// LOGIN M3U (ARREGLADO)
+async function iniciarSesionM3u(e) {
   e.preventDefault();
   const url = document.getElementById('m3uUrl').value.trim();
-  state.m3uUrl = url;
-  cargarDesdeM3U(url, 'Usuario M3U');
+  const errorBox = document.getElementById('errorMessage');
+  errorBox.classList.add('hidden');
+
+  try {
+    const response = await fetchSeguro(url);
+    const text = await response.text();
+    const parsed = parseM3U(text);
+    
+    if (parsed.channels.length === 0) throw new Error('No se encontraron canales.');
+
+    state.liveStreams = parsed.channels;
+    state.liveCategories = parsed.categories;
+    mostrarDashboard('Usuario M3U');
+  } catch (err) {
+    errorBox.innerText = 'Error al cargar lista. Verifica la URL o intenta con Xtream.';
+    errorBox.classList.remove('hidden');
+  }
 }
 
-// PETICIÓN ATRAVÉS DEL PROXY DE VERCEL
-function fetchProxy(targetUrl) {
-  const proxyUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
-  return fetch(proxyUrl).then(r => {
-    if (!r.ok) throw new Error('Error al conectar con el servidor proxy');
-    return r;
-  });
+// LOGIN XTREAM
+async function iniciarSesionXtream(e) {
+  e.preventDefault();
+  let server = document.getElementById('serverUrl').value.trim().replace(/\/+$/, "");
+  const user = document.getElementById('username').value.trim();
+  const pass = document.getElementById('password').value.trim();
+  const errorBox = document.getElementById('errorMessage');
+  errorBox.classList.add('hidden');
+
+  if (!server.startsWith('http')) server = 'http://' + server;
+
+  try {
+    // Si falla la API compleja, intentamos cargarla como M3U clásico
+    const m3uUrl = `${server}/get.php?username=${user}&password=${pass}&type=m3u_plus`;
+    const response = await fetchSeguro(m3uUrl);
+    const text = await response.text();
+    
+    const parsed = parseM3U(text);
+    if (parsed.channels.length === 0) throw new Error('Credenciales inválidas o servidor caído.');
+
+    state.liveStreams = parsed.channels;
+    state.liveCategories = parsed.categories;
+    mostrarDashboard(user);
+  } catch (err) {
+    errorBox.innerText = 'Error de conexión. Revisa el Servidor, Usuario y Contraseña.';
+    errorBox.classList.remove('hidden');
+  }
 }
 
-// CARGA DE CATEGORÍAS XTREAM
-async function cargarCategoriasYContenido(server, user, pass) {
-  const base = `${server}/player_api.php?username=${user}&password=${pass}`;
-
-  const [resLiveCats, resMovieCats, resSeriesCats, resLiveStreams, resMovieStreams, resSeriesStreams] = await Promise.all([
-    fetchProxy(`${base}&action=get_live_categories`).then(r => r.json()).catch(() => []),
-    fetchProxy(`${base}&action=get_vod_categories`).then(r => r.json()).catch(() => []),
-    fetchProxy(`${base}&action=get_series_categories`).then(r => r.json()).catch(() => []),
-    fetchProxy(`${base}&action=get_live_streams`).then(r => r.json()).catch(() => []),
-    fetchProxy(`${base}&action=get_vod_streams`).then(r => r.json()).catch(() => []),
-    fetchProxy(`${base}&action=get_series`).then(r => r.json()).catch(() => [])
-  ]);
-
-  state.liveCategories = resLiveCats || [];
-  state.movieCategories = resMovieCats || [];
-  state.seriesCategories = resSeriesCats || [];
-
-  state.liveStreams = (resLiveStreams || []).map(s => ({
-    id: s.stream_id,
-    name: s.name,
-    category_id: s.category_id,
-    url: `${server}/live/${user}/${pass}/${s.stream_id}.m3u8`
-  }));
-
-  state.movieStreams = (resMovieStreams || []).map(s => ({
-    id: s.stream_id,
-    name: s.name,
-    category_id: s.category_id,
-    url: `${server}/movie/${user}/${pass}/${s.stream_id}.${s.container_extension || 'mp4'}`
-  }));
-
-  state.seriesStreams = (resSeriesStreams || []).map(s => ({
-    id: s.series_id,
-    name: s.name,
-    category_id: s.category_id,
-    url: `${server}/series/${user}/${pass}/${s.series_id}.mp4`
-  }));
-}
-
-// CARGA PARSEADA PARA LISTA M3U DIRECTA
-function cargarDesdeM3U(url, usuario) {
-  fetchProxy(url)
-    .then(r => r.text())
-    .then(text => {
-      const parsed = parseM3U(text);
-      if (parsed.channels.length === 0) throw new Error('No se encontraron canales en la lista.');
-
-      state.liveStreams = parsed.channels;
-      state.liveCategories = parsed.categories;
-      mostrarDashboard(usuario);
-    })
-    .catch(err => {
-      const errorBox = document.getElementById('errorMessage');
-      errorBox.innerText = err.message || 'Error al conectar con la lista.';
-      errorBox.classList.remove('hidden');
-    });
-}
-
+// PARSER M3U REPARADO Y FLEXIBLE
 function parseM3U(m3uText) {
   const lines = m3uText.split(/\r?\n/);
   const channels = [];
@@ -171,8 +126,8 @@ function parseM3U(m3uText) {
     line = line.trim();
     if (line.startsWith('#EXTINF:')) {
       lastExt = line;
-    } else if (line.startsWith('http://') || line.startsWith('https://')) {
-      let name = 'Canal';
+    } else if (line.startsWith('http')) {
+      let name = 'Canal Desconocido';
       let cat = 'General';
 
       if (lastExt) {
@@ -192,18 +147,18 @@ function parseM3U(m3uText) {
   return { channels, categories };
 }
 
-// MOSTRAR PANTALLAS
+// MOSTRAR INTERFAZ
 function mostrarDashboard(usuario) {
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('appContainer').classList.remove('hidden');
-  document.getElementById('userLogged').innerText = `Logged in : ${usuario}`;
-
-  document.getElementById('countLive').innerText = `${state.liveStreams.length} Contenidos`;
-  document.getElementById('countMovies').innerText = `${state.movieStreams.length} Contenidos`;
-  document.getElementById('countSeries').innerText = `${state.seriesStreams.length} Contenidos`;
+  document.getElementById('userLogged').innerText = `Usuario: ${usuario}`;
+  
+  document.getElementById('countLive').innerText = `${state.liveStreams.length} Canales`;
+  document.getElementById('countMovies').innerText = `0 Películas`;
+  document.getElementById('countSeries').innerText = `0 Series`;
 }
 
-// ABRIR VISTA REPRODUCTOR
+// ABRIR SECCIÓN (TV, MOVIES, SERIES)
 function abrirSeccion(tipo) {
   state.activeType = tipo;
   state.activeCategory = 'ALL';
@@ -211,24 +166,14 @@ function abrirSeccion(tipo) {
   document.getElementById('appContainer').classList.add('hidden');
   document.getElementById('playerView').classList.remove('hidden');
 
-  const titleElem = document.getElementById('sectionTitle');
   let cats = [];
-
   if (tipo === 'live') {
-    titleElem.innerText = '📺 Televisión en Vivo';
+    document.getElementById('sectionTitle').innerText = '📺 TV en Vivo';
     cats = state.liveCategories;
-  } else if (tipo === 'movies') {
-    titleElem.innerText = '🎬 Películas';
-    cats = state.movieCategories;
-  } else {
-    titleElem.innerText = '🎞️ Series';
-    cats = state.seriesCategories;
   }
 
-  // Llenar selector de categorías
   const catSelect = document.getElementById('categorySelect');
-  catSelect.innerHTML = '<option value="ALL">-- Todas las Categorías --</option>';
-
+  catSelect.innerHTML = '<option value="ALL">Todas las Categorías</option>';
   cats.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.category_id;
@@ -244,20 +189,13 @@ function seleccionarCategoria(catId) {
   renderizarLista();
 }
 
-function obtenerStreamsActivos() {
-  if (state.activeType === 'live') return state.liveStreams;
-  if (state.activeType === 'movies') return state.movieStreams;
-  return state.seriesStreams;
-}
-
 function renderizarLista() {
   const container = document.getElementById('channelList');
   container.innerHTML = '';
 
-  let items = obtenerStreamsActivos();
-
+  let items = state.liveStreams; // Por ahora todo va a liveStreams con el M3U
   if (state.activeCategory !== 'ALL') {
-    items = items.filter(i => String(i.category_id) === String(state.activeCategory));
+    items = items.filter(i => i.category_id === state.activeCategory);
   }
 
   const query = document.getElementById('searchInput').value.toLowerCase();
@@ -265,60 +203,43 @@ function renderizarLista() {
     items = items.filter(i => i.name.toLowerCase().includes(query));
   }
 
-  if (items.length === 0) {
-    container.innerHTML = '<p class="loading-text">No hay elementos disponibles en esta categoría.</p>';
-    return;
-  }
-
-  // Renderizar máximo 200 por rendimiento
-  items.slice(0, 200).forEach(item => {
+  items.slice(0, 150).forEach(item => {
     const div = document.createElement('div');
     div.className = 'channel-item';
-    div.innerHTML = `
-      <span class="channel-icon">${state.activeType === 'live' ? '📺' : '🎬'}</span>
-      <span class="channel-name">${item.name}</span>
-    `;
+    div.innerHTML = `<span class="channel-icon">▶️</span><span class="channel-name">${item.name}</span>`;
     div.onclick = () => reproducirItem(item, div);
     container.appendChild(div);
   });
 }
 
-function filtrarContenido() {
-  renderizarLista();
-}
-
-// REPRODUCTOR HLS / STREAMING
+// REPRODUCTOR HLS
 function reproducirItem(item, elemento) {
   document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
   if (elemento) elemento.classList.add('active');
 
-  document.getElementById('currentChannelTitle').innerText = `Reproduciendo: ${item.name}`;
-
+  document.getElementById('currentChannelTitle').innerText = item.name;
   const video = document.getElementById('mainVideoPlayer');
-  const streamProxyUrl = `/api/proxy?url=${encodeURIComponent(item.url)}`;
+  
+  // Usamos el proxy directo también para el stream si es necesario, o la URL directa
+  const streamUrl = item.url;
 
   if (hlsPlayer) hlsPlayer.destroy();
 
   if (Hls.isSupported()) {
-    hlsPlayer = new Hls({ enableWorker: true, lowLatencyMode: true });
-    hlsPlayer.loadSource(streamProxyUrl);
+    hlsPlayer = new Hls();
+    hlsPlayer.loadSource(streamUrl);
     hlsPlayer.attachMedia(video);
-    hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = streamProxyUrl;
-    video.play().catch(() => {});
+    hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(()=>{}));
   } else {
-    video.src = streamProxyUrl;
-    video.play().catch(() => {});
+    video.src = streamUrl;
+    video.play().catch(()=>{});
   }
 }
 
-// NAVEGACIÓN Y RELOJ
 function volverAlMenu() {
   const video = document.getElementById('mainVideoPlayer');
   video.pause();
   if (hlsPlayer) hlsPlayer.destroy();
-
   document.getElementById('playerView').classList.add('hidden');
   document.getElementById('appContainer').classList.remove('hidden');
 }
@@ -328,10 +249,3 @@ function cerrarSesion() {
   document.getElementById('appContainer').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
 }
-
-setInterval(() => {
-  const clock = document.getElementById('clockDisplay');
-  if (clock) {
-    clock.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-}, 1000);
