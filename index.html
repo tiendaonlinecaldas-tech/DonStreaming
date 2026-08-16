@@ -5,112 +5,93 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Don Streaming IPTV</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
 
-  <!-- LOGIN -->
-  <div id="login-screen" class="screen">
+  <!-- PANTALLA DE LOGIN -->
+  <div id="loginScreen" class="login-container">
     <div class="login-card">
-      <div class="brand-header">
-        <div class="logo-box-login">
-          <img id="login-logo" src="logo.png" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/3163/3163478.png';" alt="Don Streaming Logo">
-        </div>
-        <h2>Don Streaming <span>IPTV</span></h2>
-        <p>Plataforma de reproducción streaming</p>
-      </div>
+      <img src="logo.png" alt="Don Streaming" class="login-logo">
+      <h2>Don Streaming IPTV</h2>
+      <p>Plataforma de reproducción streaming</p>
 
-      <div class="login-tabs">
-        <button type="button" id="tab-fast" class="tab-btn active" onclick="switchTab('fast')">🔑 Usuario / Clave</button>
-        <button type="button" id="tab-m3u" class="tab-btn" onclick="switchTab('m3u')">🔗 URL M3U</button>
-      </div>
-
-      <form id="form-fast" class="login-form">
+      <form id="loginForm" onsubmit="iniciarSesion(event)">
         <div class="input-group">
           <label>URL del Servidor / DNS</label>
-          <input type="text" id="fast-server" placeholder="http://servidor.com:8080" required>
+          <input type="text" id="serverUrl" placeholder="http://dominio.com:80" required>
         </div>
         <div class="input-group">
           <label>Usuario IPTV</label>
-          <input type="text" id="fast-user" placeholder="Tu usuario" required>
+          <input type="text" id="username" placeholder="Usuario" required>
         </div>
         <div class="input-group">
           <label>Contraseña</label>
-          <input type="password" id="fast-pass" placeholder="Tu contraseña" required>
+          <input type="password" id="password" placeholder="Contraseña" required>
         </div>
-        <button type="submit" class="btn btn-primary">🚀 Iniciar Sesión</button>
-      </form>
-
-      <form id="form-m3u" class="login-form hidden">
-        <div class="input-group">
-          <label>URL Directa M3U</label>
-          <input type="url" id="m3u-url-input" placeholder="http://servidor.com/get.php?username=...">
-        </div>
-        <button type="submit" class="btn btn-primary">Cargar Lista Directa</button>
+        <button type="submit" class="btn-login">🚀 Iniciar Sesión</button>
       </form>
     </div>
   </div>
 
-  <!-- APP PRINCIPAL -->
-  <div id="app-screen" class="screen hidden">
-    <header class="navbar">
-      <div class="nav-brand">
-        <img id="nav-logo" class="nav-logo-img" src="logo.png" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/3163/3163478.png';" alt="Logo">
-        <span class="brand-name">Don Streaming</span>
+  <!-- INTERFAZ PRINCIPAL (ESTILO IPTV SMARTERS) -->
+  <div id="appContainer" class="app-container hidden">
+    <!-- ENCABEZADO SUPERIOR -->
+    <header class="top-bar">
+      <div class="brand-box">
+        <img src="logo.png" alt="Don Streaming" class="header-logo">
+        <span class="brand-title">Don Streaming</span>
       </div>
-      <div class="nav-actions">
-        <button id="proxy-toggle-btn" class="btn-action btn-proxy" onclick="toggleProxyMode()">⚡ Proxy: OFF</button>
-        <button id="reload-btn" class="btn-action">🔄 Recargar Lista</button>
-        <button id="logout-btn" class="btn-action btn-logout">Cerrar Sesión</button>
+      <div class="info-box">
+        <span id="clockDisplay">12:00 PM</span>
+        <span id="expDisplay">Expiration: --</span>
+        <button onclick="cerrarSesion()" class="btn-logout">Cerrar Sesión</button>
       </div>
     </header>
 
-    <main class="main-layout">
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <div class="content-tabs">
-            <button id="nav-live" class="tab-nav active" onclick="setMode('live')">📺 Canales</button>
-            <button id="nav-movie" class="tab-nav" onclick="setMode('movie')">🎬 Películas</button>
-            <button id="nav-series" class="tab-nav" onclick="setMode('series')">🍿 Series</button>
-          </div>
+    <!-- GRILLA DE DASHBOARD -->
+    <main class="smarters-grid">
+      <!-- BOTÓN LIVE TV -->
+      <div class="tile tile-live" onclick="abrirSeccion('live')">
+        <div class="tile-icon">📺</div>
+        <div class="tile-title">LIVE TV</div>
+      </div>
 
-          <div class="search-wrapper">
-            <input type="text" id="search-channel" placeholder="🔍 Buscar contenido...">
-          </div>
+      <!-- BOTÓN MOVIES -->
+      <div class="tile tile-movies" onclick="abrirSeccion('vod')">
+        <div class="tile-icon">🎬</div>
+        <div class="tile-title">MOVIES</div>
+      </div>
 
-          <div class="filter-wrapper">
-            <select id="category-select">
-              <option value="ALL">Cargando categorías...</option>
-            </select>
-          </div>
-        </div>
+      <!-- BOTÓN SERIES -->
+      <div class="tile tile-series" onclick="abrirSeccion('series')">
+        <div class="tile-icon">🎞️</div>
+        <div class="tile-title">SERIES</div>
+      </div>
 
-        <div class="list-container">
-          <ul id="channel-list" class="channel-list"></ul>
-        </div>
-      </aside>
+      <!-- BOTÓN CATCH UP -->
+      <div class="tile tile-small" onclick="abrirSeccion('catchup')">
+        <div class="tile-icon">⏱️</div>
+        <div class="tile-title-small">CATCH UP</div>
+      </div>
 
-      <section class="player-section">
-        <div class="player-wrapper">
-          <video id="video-player" controls autoplay playsinline></video>
-        </div>
+      <!-- BOTÓN MULTISCREEN -->
+      <div class="tile tile-small" onclick="abrirSeccion('multiscreen')">
+        <div class="tile-icon">🖥️</div>
+        <div class="tile-title-small">MULTISCREEN</div>
+      </div>
 
-        <div class="now-playing-bar">
-          <div class="channel-meta">
-            <div class="logo-box">
-              <img id="current-channel-logo" src="https://cdn-icons-png.flaticon.com/512/3163/3163478.png" alt="Logo Canal">
-            </div>
-            <div class="channel-details">
-              <h3 id="current-channel-title">Selecciona un contenido</h3>
-              <p id="current-channel-status" class="status-indicator">En espera...</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <!-- BOTÓN SETTINGS -->
+      <div class="tile tile-small" onclick="abrirSeccion('settings')">
+        <div class="tile-icon">⚙️</div>
+        <div class="tile-title-small">SETTINGS</div>
+      </div>
     </main>
+
+    <!-- FOOTER USUARIO -->
+    <footer class="footer-bar">
+      <span id="userLogged">Logged in : --</span>
+    </footer>
   </div>
 
   <script src="app.js"></script>
