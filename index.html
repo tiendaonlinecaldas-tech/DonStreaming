@@ -31,7 +31,7 @@
       border-radius: 20px;
       padding: 30px;
       width: 100%;
-      max-width: 480px;
+      max-width: 500px;
       text-align: center;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
     }
@@ -140,21 +140,22 @@
       padding: 10px;
       border-radius: 8px;
       font-size: 12px;
+      word-break: break-all;
     }
     .status-success { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
     .status-error { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; }
 
-    /* REPRODUCTOR */
-    .player-view { width: 100vw; height: 100vh; display: flex; flex-direction: column; background: #000; }
-    .player-header { padding: 12px 20px; background: #0f172a; display: flex; gap: 15px; align-items: center; }
+    /* REPRODUCTOR ESTILO TV */
+    .player-view { width: 100vw; height: 100vh; display: flex; flex-direction: column; background: #000; position: fixed; top: 0; left: 0; z-index: 999; }
+    .player-header { padding: 12px 20px; background: #0f172a; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; }
     .btn-back { background: #ef4444; border: none; color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; }
     .player-content { display: flex; flex: 1; overflow: hidden; }
-    .channel-sidebar { width: 300px; background: #0f172a; padding: 12px; display: flex; flex-direction: column; }
+    .channel-sidebar { width: 320px; background: #0f172a; padding: 15px; display: flex; flex-direction: column; border-right: 1px solid #1e293b; }
     .channel-list { flex: 1; overflow-y: auto; margin-top: 10px; }
-    .channel-item { padding: 10px; border-radius: 6px; cursor: pointer; background: rgba(255,255,255,0.03); margin-bottom: 5px; font-size: 13px; }
-    .channel-item:hover, .channel-item.active { background: #6366f1; }
-    .video-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; }
-    video { width: 100%; height: 80vh; }
+    .channel-item { padding: 12px; border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.03); margin-bottom: 6px; font-size: 13px; transition: all 0.2s; text-align: left; }
+    .channel-item:hover, .channel-item.active { background: #6366f1; color: #fff; font-weight: bold; }
+    .video-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; padding: 20px; }
+    video { width: 100%; max-height: 80vh; background: #050505; border-radius: 10px; }
   </style>
 </head>
 <body>
@@ -184,10 +185,10 @@
       </div>
 
       <p style="font-size: 12px; color: #94a3b8; margin-bottom: 15px;">
-        Entrega esta <b>MAC</b> a tu proveedor Don Streaming para activar tu servicio remotamente.
+        Pásale esta <b>MAC</b> a tu proveedor para activar el servicio o configúrala en el Panel Admin.
       </p>
 
-      <button class="btn-action" onclick="comprobarActivacionRemota()">🔄 Verificar Activación</button>
+      <button class="btn-action" onclick="comprobarActivacionRemota()">🔄 Probar / Reproducir Lista</button>
     </div>
 
     <!-- VISTA ADMIN / RESELLER -->
@@ -202,7 +203,7 @@
 
       <div id="adminPanel" class="hidden">
         <div style="background: rgba(99, 102, 241, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-          <small style="color: #818cf8;"><b>Cargar Lista Remota a un Cliente</b></small>
+          <small style="color: #818cf8;"><b>Vincular Lista Remota a un Cliente</b></small>
         </div>
 
         <div class="input-group">
@@ -211,11 +212,11 @@
         </div>
 
         <div class="input-group">
-          <label>URL M3U / Lista del Cliente:</label>
-          <input type="text" id="targetM3u" placeholder="http://servidor.com/get.php?username=...">
+          <label>URL M3U / Lista IPTV:</label>
+          <input type="text" id="targetM3u" placeholder="http://servidor.com/playlist/...">
         </div>
 
-        <button class="btn-action" style="background: #10b981;" onclick="vincularListaRemota()">⚡ Activar Servicio al Cliente</button>
+        <button class="btn-action" style="background: #10b981;" onclick="vincularListaRemota()">⚡ Activar Lista y Probar</button>
       </div>
     </div>
 
@@ -225,19 +226,19 @@
   <!-- VISTA REPRODUCTOR -->
   <div id="playerView" class="player-view hidden">
     <header class="player-header">
-      <button onclick="cerrarReproductor()" class="btn-back">🚪 Salir / Desconectar</button>
-      <h3 id="playerTitle">Don Streaming TV</h3>
+      <h3 id="playerTitle">📺 Don Streaming Player</h3>
+      <button onclick="cerrarReproductor()" class="btn-back">🚪 Salir al Panel</button>
     </header>
 
     <div class="player-content">
       <aside class="channel-sidebar">
-        <input type="text" id="searchChannel" placeholder="🔍 Buscar canal..." oninput="filtrarCanales()" style="padding:8px; border-radius:6px; border:1px solid #334155; background:#090d16; color:#fff;">
+        <input type="text" id="searchChannel" placeholder="🔍 Buscar canal..." oninput="filtrarCanales()" style="padding:10px; border-radius:8px; border:1px solid #334155; background:#090d16; color:#fff; width:100%;">
         <div id="channelList" class="channel-list"></div>
       </aside>
 
       <main class="video-container">
         <video id="videoPlayer" controls autoplay playsinline></video>
-        <h4 id="activeChannelName" style="margin-top:10px; color:#94a3b8;">Selecciona un canal para reproducir</h4>
+        <h4 id="activeChannelName" style="margin-top:15px; color:#38bdf8;">Selecciona un canal de la lista</h4>
       </main>
     </div>
   </div>
@@ -248,7 +249,12 @@
     let loadedChannels = [];
     let hls = null;
 
-    // 1. INICIALIZAR MAC Y KEY ÚNICAS DEL DISPOSITIVO
+    // PROXIES PARA EVITAR EL ERROR "FAILED TO FETCH" Y MEZCLA DE HTTP/HTTPS
+    const PROXIES = [
+      url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      url => `https://corsproxy.io/?${encodeURIComponent(url)}`
+    ];
+
     function initDevice() {
       let mac = localStorage.getItem('ds_mac');
       let key = localStorage.getItem('ds_key');
@@ -265,10 +271,7 @@
       currentKey = key;
       document.getElementById('displayMac').innerText = mac;
       document.getElementById('displayKey').innerText = key;
-      document.getElementById('targetMac').value = mac; // Auto-rellenar para pruebas en local
-
-      // Auto-comprobar si ya tiene lista vinculada
-      comprobarActivacionRemota(true);
+      document.getElementById('targetMac').value = mac; // Rellenar automáticamente con la MAC actual para pruebas rápidas
     }
 
     function switchTab(tab) {
@@ -281,63 +284,72 @@
 
     function ingresarAdmin() {
       const pass = document.getElementById('adminPass').value;
-      if (pass === '1234') { // Puedes cambiar esta clave si gustas
+      if (pass === '1234') {
         document.getElementById('adminAuth').classList.add('hidden');
         document.getElementById('adminPanel').classList.remove('hidden');
-        showStatus('Acceso correcto al Panel Admin', 'success');
+        showStatus('Acceso concedido al Panel Admin', 'success');
       } else {
-        showStatus('Clave de administrador incorrecta', 'error');
+        showStatus('Clave incorrecta (Usa: 1234)', 'error');
       }
     }
 
-    // 2. VINCULAR REMOTAMENTE UNA LISTA A UNA MAC
     function vincularListaRemota() {
       const targetMac = document.getElementById('targetMac').value.trim().toUpperCase();
       const targetM3u = document.getElementById('targetM3u').value.trim();
 
       if (!targetMac || !targetM3u) {
-        showStatus('Debes ingresar la MAC y la URL M3U de la lista', 'error');
+        showStatus('Debes escribir la MAC y la URL M3U', 'error');
         return;
       }
 
-      // Guardar vinculación en la base de datos local / registro
       localStorage.setItem('playlist_' + targetMac, targetM3u);
-      showStatus(`¡Lista activada correctamente para la MAC: ${targetMac}!`, 'success');
+      showStatus(`¡Lista guardada para MAC: ${targetMac}! Descargando canales...`, 'success');
 
-      // Si la MAC coincide con este dispositivo, cargar de una vez
       if (targetMac === currentMac) {
-        setTimeout(() => comprobarActivacionRemota(), 1000);
+        comprobarActivacionRemota();
       }
     }
 
-    // 3. COMPROBAR SI LA MAC TIENE LISTA Y CARGARLA
-    async function comprobarActivacionRemota(silent = false) {
+    async function descargarConProxy(url) {
+      // Intentar descarga directa primero
+      try {
+        const res = await fetch(url);
+        if (res.ok) return await res.text();
+      } catch (e) {}
+
+      // Si falla por CORS/HTTPS, intentar a través de Proxies
+      for (let proxyFn of PROXIES) {
+        try {
+          const res = await fetch(proxyFn(url));
+          if (res.ok) return await res.text();
+        } catch (e) {}
+      }
+      throw new Error('No se pudo conectar al servidor de la lista M3U. Revisa la URL.');
+    }
+
+    async function comprobarActivacionRemota() {
       const activeM3u = localStorage.getItem('playlist_' + currentMac);
 
       if (!activeM3u) {
-        if (!silent) showStatus('Este dispositivo aún no tiene una lista activada. Solicítala a tu proveedor.', 'error');
+        showStatus('No hay ninguna lista M3U asignada a este dispositivo.', 'error');
         return;
       }
 
-      showStatus('⏳ Cargando lista vinculada...', 'success');
+      showStatus('⏳ Conectando y descifrando canales M3U...', 'success');
 
       try {
-        // Petición directa
-        const response = await fetch(activeM3u);
-        if (!response.ok) throw new Error('No se pudo descargar la lista. Verifica la URL.');
-        
-        const m3uText = await response.text();
+        const m3uText = await descargarConProxy(activeM3u);
         loadedChannels = parseM3U(m3uText);
 
-        if (loadedChannels.length === 0) throw new Error('La lista no contiene canales válidos.');
+        if (loadedChannels.length === 0) throw new Error('La lista no contiene canales o venció.');
 
-        abrirReproductor();
+        showStatus(`¡Éxito! ${loadedChannels.length} canales cargados.`, 'success');
+        setTimeout(() => abrirReproductor(), 800);
       } catch (err) {
-        showStatus('Error al cargar contenido: ' + err.message, 'error');
+        showStatus('Error: ' + err.message, 'error');
       }
     }
 
-    // PARSER M3U
     function parseM3U(text) {
       const lines = text.split(/\r?\n/);
       const channels = [];
@@ -348,7 +360,7 @@
         if (line.startsWith('#EXTINF:')) {
           lastExt = line;
         } else if (line.startsWith('http')) {
-          let name = 'Canal de TV';
+          let name = 'Canal Sin Nombre';
           if (lastExt) {
             const idx = lastExt.lastIndexOf(',');
             if (idx !== -1) name = lastExt.substring(idx + 1).trim();
@@ -360,7 +372,6 @@
       return channels;
     }
 
-    // REPRODUCTOR
     function abrirReproductor() {
       document.getElementById('mainScreen').classList.add('hidden');
       document.getElementById('playerView').classList.remove('hidden');
@@ -378,7 +389,7 @@
       const container = document.getElementById('channelList');
       container.innerHTML = '';
 
-      lista.slice(0, 150).forEach(item => {
+      lista.slice(0, 200).forEach(item => {
         const div = document.createElement('div');
         div.className = 'channel-item';
         div.innerText = `📺 ${item.name}`;
@@ -403,7 +414,10 @@
       if (hls) hls.destroy();
 
       if (Hls.isSupported()) {
-        hls = new Hls();
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true
+        });
         hls.loadSource(item.url);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
