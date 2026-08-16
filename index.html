@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Don Streaming IPTV</title>
   
-  <!-- HLS Player -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -54,7 +51,7 @@
 
     .btn-action { width: 100%; padding: 11px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none; border-radius: 9px; color: #fff; font-weight: bold; font-size: 13px; cursor: pointer; margin-top: 5px; }
 
-    .status-msg { margin-top: 12px; padding: 8px; border-radius: 8px; font-size: 11px; word-break: break-all; }
+    .status-msg { margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 11px; word-break: break-all; }
     .status-success { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
     .status-error { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; }
 
@@ -96,10 +93,7 @@
           <span id="displayKey">572290</span>
         </div>
       </div>
-      <p style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">
-        Envía esta MAC a tu proveedor para activar tu servicio. Una vez activado, presiona el botón inferior.
-      </p>
-      <button class="btn-action" onclick="comprobarActivacionMacRemota()">🔄 Verificar / Cargar Lista Remota</button>
+      <button class="btn-action" onclick="comprobarActivacionMacRemota()">🔄 Cargar Canales</button>
     </div>
 
     <!-- INGRESO DIRECTO -->
@@ -130,7 +124,7 @@
           <label>URL M3U o Xtream Link:</label>
           <input type="text" id="targetM3u" placeholder="http://aioplus.es:80/playlist/USUARIO/CLAVE/m3u">
         </div>
-        <button class="btn-action" style="background: #10b981;" onclick="vincularListaRemotaCloud()">⚡ Activar / Guardar en Nube</button>
+        <button class="btn-action" style="background: #10b981;" onclick="vincularListaRemotaCloud()">⚡ Guardar en Firebase</button>
       </div>
     </div>
 
@@ -141,7 +135,7 @@
   <div id="playerView" class="player-view hidden">
     <header class="player-header">
       <h3 id="playerTitle">📺 Don Streaming Player</h3>
-      <button onclick="cerrarReproductor()" class="btn-back">🚪 Salir / Desconectar</button>
+      <button onclick="cerrarReproductor()" class="btn-back">🚪 Salir</button>
     </header>
 
     <div class="player-content">
@@ -158,7 +152,6 @@
   </div>
 
   <script>
-    // CONFIGURACIÓN DE FIREBASE (YA INCLUIDA)
     const firebaseConfig = {
       apiKey: "AIzaSyAqCNZM3l0f0Kk0KwywXyY-0qXsH6ZqA4",
       authDomain: "donstreaming-6c348.firebaseapp.com",
@@ -173,7 +166,7 @@
     try {
       firebase.initializeApp(firebaseConfig);
       db = firebase.database();
-    } catch(e) { console.log("Error al iniciar Firebase", e); }
+    } catch(e) {}
 
     let currentDeviceMac = '';
     let loadedChannels = [];
@@ -212,7 +205,7 @@
 
     async function comprobarActivacionMacRemota() {
       const macLimpia = currentDeviceMac.replace(/:/g, '');
-      showStatus('⏳ Verificando activación en la nube...', 'success');
+      showStatus('⏳ Consultando base de datos...', 'success');
 
       if (db) {
         db.ref('activaciones/' + macLimpia).once('value').then(snapshot => {
@@ -221,13 +214,11 @@
             document.getElementById('directM3uUrl').value = url;
             conectarM3uDirecto();
           } else {
-            showStatus('⚠️ MAC no activada. Por favor envía tu MAC al administrador.', 'error');
+            showStatus('⚠️ MAC no registrada en Firebase. Por favor guárdala primero en el Panel Admin.', 'error');
           }
         }).catch(err => {
-          showStatus('Error al consultar Firebase.', 'error');
+          showStatus('Error al conectar con Firebase', 'error');
         });
-      } else {
-        showStatus('Error de conexión a la base de datos.', 'error');
       }
     }
 
@@ -235,16 +226,16 @@
       const targetMac = document.getElementById('targetMac').value.trim().toUpperCase();
       const targetM3u = document.getElementById('targetM3u').value.trim();
 
-      if (!targetMac || !targetM3u) return showStatus('Ingresa la MAC y la URL M3U', 'error');
+      if (!targetMac || !targetM3u) return showStatus('Completa ambos campos', 'error');
 
       const macLimpia = targetMac.replace(/:/g, '');
 
       if (db) {
         db.ref('activaciones/' + macLimpia).set(targetM3u, (error) => {
           if (error) {
-            showStatus('Error guardando en nube: ' + error.message, 'error');
+            showStatus('Error guardando en Firebase: ' + error.message, 'error');
           } else {
-            showStatus(`✅ ¡MAC ${targetMac} activada exitosamente en la nube!`, 'success');
+            showStatus(`✅ MAC ${targetMac} guardada con éxito en Firebase. Ahora ve a "Activación por MAC" y presiona Cargar Canales.`, 'success');
           }
         });
       }
@@ -254,69 +245,57 @@
       try {
         const u = new URL(url);
         const parts = u.pathname.split('/');
-        if (parts.length >= 4 && parts[1] === 'playlist') {
-          return { host: `${u.protocol}//${u.host}`, user: parts[2], pass: parts[3] };
+        if (parts.length >= 4 && (parts[1] === 'playlist' || parts[1] === 'get.php')) {
+          return { host: `${u.protocol}//${u.host}`, user: parts[2], pass: parts[3].replace('.m3u', '') };
         }
       } catch (e) {}
       return null;
     }
 
-    async function solicitarUrl(targetUrl) {
-      const endpoints = [
-        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
-        `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
-      ];
-
-      for (let proxy of endpoints) {
-        try {
-          const res = await fetch(proxy);
-          if (res.ok) {
-            const data = await res.text();
-            if (data && data.length > 50) return data;
-          }
-        } catch (e) {}
-      }
-      return null;
-    }
-
     async function conectarM3uDirecto() {
       const url = document.getElementById('directM3uUrl').value.trim();
-      if (!url) return showStatus('Ingresa una URL válida', 'error');
+      if (!url) return showStatus('Ingresa una URL M3U válida', 'error');
 
-      showStatus('⏳ Descargando canales...', 'success');
+      showStatus('⏳ Conectando con el servidor IPTV...', 'success');
 
-      const xtreamData = parseXtreamFromUrl(url);
-      if (xtreamData) {
-        const jsonUrl = `${xtreamData.host}/player_api.php?username=${xtreamData.user}&password=${xtreamData.pass}&action=get_live_streams`;
-        const jsonText = await solicitarUrl(jsonUrl);
-        if (jsonText) {
-          try {
-            const streams = JSON.parse(jsonText);
+      const xtream = parseXtreamFromUrl(url);
+
+      if (xtream) {
+        // Método ultrarrápido usando la API de Xtream Codes
+        const apiUrl = `https://corsproxy.io/?${encodeURIComponent(`${xtream.host}/player_api.php?username=${xtream.user}&password=${xtream.pass}&action=get_live_streams`)}`;
+        
+        try {
+          const res = await fetch(apiUrl);
+          if (res.ok) {
+            const streams = await res.json();
             if (Array.isArray(streams) && streams.length > 0) {
               loadedChannels = streams.map(s => ({
                 name: s.name,
-                url: `${xtreamData.host}/live/${xtreamData.user}/${xtreamData.pass}/${s.stream_id}.m3u8`
+                url: `${xtream.host}/live/${xtream.user}/${xtream.pass}/${s.stream_id}.m3u8`
               }));
-              showStatus(`¡Éxito! ${loadedChannels.length} canales cargados.`, 'success');
-              setTimeout(() => abrirReproductor(), 600);
+              showStatus(`¡Cargados ${loadedChannels.length} canales con éxito!`, 'success');
+              setTimeout(() => abrirReproductor(), 500);
               return;
             }
-          } catch(e) {}
-        }
+          }
+        } catch(e) {}
       }
 
-      const m3uText = await solicitarUrl(url);
-      if (m3uText) {
-        loadedChannels = parseM3U(m3uText);
+      // Método de respaldo por descarga M3U
+      try {
+        const fallbackUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        const res = await fetch(fallbackUrl);
+        const text = await res.text();
+        loadedChannels = parseM3U(text);
+
         if (loadedChannels.length > 0) {
-          showStatus(`¡Éxito! ${loadedChannels.length} canales cargados.`, 'success');
-          setTimeout(() => abrirReproductor(), 600);
+          showStatus(`¡Cargados ${loadedChannels.length} canales!`, 'success');
+          setTimeout(() => abrirReproductor(), 500);
           return;
         }
-      }
+      } catch(e) {}
 
-      showStatus('Error: No se pudo cargar la lista. Verifica que esté activa.', 'error');
+      showStatus('❌ No se pudieron obtener los canales. Verifica que tu credencial MAUROIPTV esté activa en la plataforma original.', 'error');
     }
 
     function parseM3U(text) {
@@ -329,7 +308,7 @@
         if (line.startsWith('#EXTINF:')) {
           lastExt = line;
         } else if (line.startsWith('http')) {
-          let name = 'Canal sin nombre';
+          let name = 'Canal';
           if (lastExt) {
             const idx = lastExt.lastIndexOf(',');
             if (idx !== -1) name = lastExt.substring(idx + 1).trim();
@@ -345,7 +324,7 @@
       if (document.getElementById('adminPass').value === '1234') {
         document.getElementById('adminAuth').classList.add('hidden');
         document.getElementById('adminPanel').classList.remove('hidden');
-        showStatus('Acceso concedido', 'success');
+        showStatus('Panel de Control Abierto', 'success');
       } else {
         showStatus('Clave incorrecta', 'error');
       }
