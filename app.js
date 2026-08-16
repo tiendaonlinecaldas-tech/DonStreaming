@@ -1,6 +1,5 @@
 // VARIABLES GLOBALES DE SESIÓN
 let session = {
-  type: null,
   server: '',
   user: '',
   pass: '',
@@ -10,59 +9,33 @@ let session = {
 
 let hlsPlayer = null;
 
-// PESTAÑAS LOGIN
-function cambiarMetodo(metodo) {
-  const formXtream = document.getElementById('formXtream');
-  const formM3u = document.getElementById('formM3u');
-  const tabXtream = document.getElementById('tabXtream');
-  const tabM3u = document.getElementById('tabM3u');
-
-  if (metodo === 'xtream') {
-    formXtream.classList.remove('hidden');
-    formM3u.classList.add('hidden');
-    tabXtream.classList.add('active');
-    tabM3u.classList.remove('active');
-  } else {
-    formXtream.classList.add('hidden');
-    formM3u.classList.remove('hidden');
-    tabXtream.classList.remove('active');
-    tabM3u.classList.add('active');
-  }
-}
-
-// INICIO SESIÓN XTREAM
-function iniciarSesionXtream(e) {
+// INICIO DE SESIÓN CON USUARIO, CONTRASEÑA Y URL
+function iniciarSesion(e) {
   e.preventDefault();
+  
   let server = document.getElementById('serverUrl').value.trim();
   const user = document.getElementById('username').value.trim();
   const pass = document.getElementById('password').value.trim();
 
+  // Asegurar formato HTTP/HTTPS
   if (!server.startsWith('http://') && !server.startsWith('https://')) {
     server = 'http://' + server;
   }
 
-  session.type = 'xtream';
+  // Eliminar barras diagonales al final si existen
+  server = server.replace(/\/+$/, "");
+
   session.server = server;
   session.user = user;
   session.pass = pass;
 
+  // Construir automáticamente la lista M3U
   session.m3uUrl = `${server}/get.php?username=${user}&password=${pass}&type=m3u_plus`;
 
   cargarListaIPTV(session.m3uUrl, user);
 }
 
-// INICIO SESIÓN M3U
-function iniciarSesionM3u(e) {
-  e.preventDefault();
-  const url = document.getElementById('m3uUrl').value.trim();
-
-  session.type = 'm3u';
-  session.m3uUrl = url;
-
-  cargarListaIPTV(url, 'Usuario M3U');
-}
-
-// CARGA Y PARSEO DE LA LISTA
+// CARGA Y PROCESAMIENTO DE LA LISTA
 function cargarListaIPTV(url, usuario) {
   const errorBox = document.getElementById('errorMessage');
   errorBox.classList.add('hidden');
@@ -71,14 +44,14 @@ function cargarListaIPTV(url, usuario) {
 
   fetch(proxyUrl)
     .then(res => {
-      if (!res.ok) throw new Error('No se pudo descargar la lista del servidor.');
+      if (!res.ok) throw new Error('No se pudo conectar al servidor IPTV.');
       return res.text();
     })
     .then(textData => {
       session.channels = parseM3UFlex(textData);
 
       if (session.channels.length === 0) {
-        throw new Error('La lista no contiene enlaces reproducibles válidos.');
+        throw new Error('Las credenciales o la URL no devolvieron canales válidos.');
       }
 
       document.getElementById('loginScreen').classList.add('hidden');
@@ -86,12 +59,12 @@ function cargarListaIPTV(url, usuario) {
       document.getElementById('userLogged').innerText = `Logged in : ${usuario}`;
     })
     .catch(err => {
-      errorBox.innerText = err.message || 'Error de conexión. Verifica la lista o credenciales.';
+      errorBox.innerText = err.message || 'Error de conexión. Revisa URL, Usuario o Contraseña.';
       errorBox.classList.remove('hidden');
     });
 }
 
-// PARSEADOR ULTRA FLEXIBLE (ACEPTA CUALQUIER FORMATO M3U)
+// PARSEADOR M3U FLEXIBLE
 function parseM3UFlex(m3uText) {
   const lines = m3uText.split(/\r?\n/);
   const channels = [];
@@ -131,7 +104,7 @@ function parseM3UFlex(m3uText) {
   return channels;
 }
 
-// ABRIR VISTA PRINCIPAL
+// ABRIR SECCIONES (LIVE TV / MOVIES / SERIES)
 function abrirSeccion(tipo) {
   document.getElementById('appContainer').classList.add('hidden');
   document.getElementById('playerView').classList.remove('hidden');
@@ -144,7 +117,7 @@ function abrirSeccion(tipo) {
   renderizarCanales(session.channels);
 }
 
-// RENDERIZAR CANALES EN EL MENÚ LATERAL
+// RENDERIZAR CANALES EN LISTA LATERAL
 function renderizarCanales(lista) {
   const listContainer = document.getElementById('channelList');
   listContainer.innerHTML = '';
@@ -154,7 +127,7 @@ function renderizarCanales(lista) {
     return;
   }
 
-  // Cargar primeros 300 elementos para evitar sobrecargar la vista
+  // Cargar primeros 300 elementos
   const limite = lista.slice(0, 300);
 
   limite.forEach((item) => {
@@ -169,14 +142,14 @@ function renderizarCanales(lista) {
   });
 }
 
-// FILTRAR POR BÚSQUEDA
+// FILTRADO POR BÚSQUEDA
 function filtrarCanales() {
   const query = document.getElementById('searchInput').value.toLowerCase();
   const filtrados = session.channels.filter(c => c.name.toLowerCase().includes(query));
   renderizarCanales(filtrados);
 }
 
-// REPRODUCIR STREAM DE VIDEO
+// REPRODUCCIÓN DE VIDEO
 function reproducirCanal(canal, elementoHtml) {
   document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
   if (elementoHtml) elementoHtml.classList.add('active');
@@ -209,7 +182,7 @@ function reproducirCanal(canal, elementoHtml) {
   }
 }
 
-// NAVEGACIÓN
+// NAVEGACIÓN Y SALIDA
 function volverAlMenu() {
   const video = document.getElementById('mainVideoPlayer');
   video.pause();
